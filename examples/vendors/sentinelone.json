@@ -1,0 +1,1 @@
+{"agentComputerName":"pc01.contoso.local","agentUuid":"11111111-2222-3333-4444-555555555555","storylineId":"story-42","threatId":"threat-7","externalIp":"203.0.113.10","username":"mrossi","commandLine":"powershell.exe -File C:\\Users\\mrossi\\test.ps1","severity":"high"}

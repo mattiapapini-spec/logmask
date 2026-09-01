@@ -1,0 +1,115 @@
+id: bitdefender
+label: Bitdefender GravityZone
+version: '2026.07'
+aliases:
+- gravityzone
+- bdgz
+- bd
+- gz
+fingerprints:
+- pattern: ^alert\.att&ck_subtechnique_id$
+  weight: 4
+- pattern: ^alert\.att&ck_technique_id$
+  weight: 3
+- pattern: ^other\.sensor_name$
+  weight: 4
+- pattern: ^other\.detection_class$
+  weight: 4
+- pattern: ^network\.container_id$
+  weight: 3
+- pattern: ^network\.container_name$
+  weight: 3
+- pattern: ^alert\.incident_number$
+  weight: 3
+- pattern: ^alert\.mark$
+  weight: 2
+- pattern: ^fileless_attack$
+  weight: 4
+- pattern: ^detecting_technology$
+  weight: 4
+- pattern: ^detecting_module$
+  weight: 3
+- pattern: ^container_host$
+  weight: 3
+- pattern: ^endpoint_type$
+  weight: 3
+- pattern: ^action_taken$
+  weight: 2
+rules:
+- pattern: .*att&ck.*
+  action: keep
+- pattern: ^alert\.(type|mark|actions_taken|actions_to_take)$
+  action: keep
+- pattern: ^network\.operation$
+  action: keep
+- pattern: ^other\.(detection_class|event_type)$
+  action: keep
+- pattern: .*\.(sha256|sha1|md5|hash|file_hash)$
+  action: keep
+- pattern: .*\.(type|event_type|operation|action|status|severity|class|detection_class|verdict|direction|category|confidence)$
+  action: keep
+- pattern: .*\.incident_number$
+  action: keep
+- pattern: ^(alert\.name|email\.subject|registry\.key|resource\.name)$
+  action: text
+- pattern: ^registry\..*$
+  action: text
+- pattern: .*\.(name|subject|command_line|cmd_line|path|file_path|image_path|process_path|url|uri|message|description)$
+  action: text
+- pattern: .*\.(sender_address|receiver_address|email|user_email|mail)$
+  action: mask
+  kind: email
+- pattern: .*\.(ip|ip_address|ipv4|ipv6|source_ip|destination_ip|src_ip|dst_ip|local_ip|remote_ip|public_ip)$
+  action: mask
+  kind: ip
+- pattern: ^other\.sensor_name$
+  action: mask
+  kind: endpoint
+- pattern: .*\.(hostname|host_name|computer_name|device_name|machine_name|endpoint_name|sensor_name|dns_name)$
+  action: mask
+  kind: endpoint
+- pattern: .*\.(domain_name|fqdn|dns_domain)$
+  action: mask
+  kind: fqdn
+- pattern: .*\.(username|user_name|logon_user|account_name)$
+  action: mask
+  kind: user
+- pattern: .*\.(user_sid|sid)$
+  action: mask
+  kind: sid
+- pattern: .*\.(mac|mac_address)$
+  action: mask
+  kind: mac
+- pattern: ^network\.(container_id|container_name)$
+  action: mask
+  kind: opaque
+- pattern: .*\.(id|ids|uuid|guid|incident_id|object_id|agent_id|sensor_id)$
+  action: mask
+  kind: opaque
+- pattern: ^(sha256|sha1|md5|imphash|ssdeep|file_hash)$
+  action: keep
+- pattern: ^threat_name$
+  action: keep
+- pattern: ^(threat_type|action_taken|actions_taken|detected_action|detecting_module|detecting_technology|endpoint_type|fileless_attack|detection_type|malware_type|status|severity|category|detected_on|first_seen|last_seen|blocked)$
+  action: keep
+- pattern: ^command[-_ ]?line$
+  action: text
+- pattern: ^(details|tag|tags|eventi|events?|description|notes?)$
+  action: text
+- pattern: ^(endpoint_name|container_host|device_name|machine_name|computer_name|host_name|hostname)$
+  action: mask
+  kind: endpoint
+- pattern: ^company$
+  action: mask
+  kind: opaque
+- pattern: ^ip$
+  action: mask
+  kind: ip
+- pattern: ^user$
+  action: mask
+  kind: user
+header_hints:
+- bitdefender
+- gravityzone
+- bdgz
+notes: Bitdefender GravityZone EDR/XDR dotted event schema (alert.*, network.*, email.*, other.*, registry.*, resource.*).

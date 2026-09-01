@@ -1,0 +1,24 @@
+id: splunk_cim
+label: Splunk (CIM export)
+version: 2026.07.1
+aliases: [splunk, cim, splunk_es]
+fingerprints:
+- {pattern: '^sourcetype$', weight: 8}
+- {pattern: '^_raw$', weight: 8}
+- {pattern: '^_time$', weight: 5}
+- {pattern: '^dvc$', weight: 4}
+- {pattern: '^dest_ip$', weight: 3}
+- {pattern: '^src_ip$', weight: 3}
+- {pattern: '^index$', weight: 2}
+rules:
+- {pattern: '^(user|src_user|dest_user|src_nt_user|dest_nt_user)$', action: mask, kind: user}
+- {pattern: '^(src_nt_domain|dest_nt_domain|nt_domain)$', action: mask, kind: windomain}
+- {pattern: '^(src|dest|dvc|orig_host|host)$', action: mask, kind: endpoint}
+- {pattern: '^(src_host|dest_host|src_dns|dest_dns)$', action: mask, kind: fqdn}
+- {pattern: '^(src_ip|dest_ip|dvc_ip|src_translated_ip|dest_translated_ip)$', action: mask, kind: ip}
+- {pattern: '^(src_mac|dest_mac)$', action: mask, kind: mac}
+- {pattern: '^(_raw|body|message|subject|signature_extra)$', action: text}
+- {pattern: '^(url|uri_path|uri_query|http_referrer|http_user_agent|file_name|file_path|file_hash|process(_name)?|parent_process(_name)?|app|signature(_id)?)$', action: keep}
+- {pattern: '^(_time|source|sourcetype|index|action|status|severity|eventtype|tag|vendor_product|transport|protocol|direction|(src|dest)_port|bytes(_in|_out)?|duration|count)$', action: keep}
+header_hints: [_time, sourcetype, _raw]
+notes: Export CSV da Splunk (campi CIM). _raw passa dallo scrub testo libero; src/dest possono contenere host o IP (kind endpoint gestisce entrambi).

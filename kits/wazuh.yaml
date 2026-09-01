@@ -1,0 +1,27 @@
+id: wazuh
+label: Wazuh / OSSEC (alerts)
+version: 2026.07.1
+aliases: [ossec, wazuh_alerts]
+fingerprints:
+- {pattern: '^rule\.description$', weight: 5}
+- {pattern: '^agent\.name$', weight: 5}
+- {pattern: '^manager\.name$', weight: 8}
+- {pattern: '^decoder\.name$', weight: 5}
+- {pattern: '^rule\.level$', weight: 4}
+- {pattern: '^full_log$', weight: 4}
+- {pattern: '^predecoder\.hostname$', weight: 5}
+- {pattern: '^syscheck\.path$', weight: 4}
+rules:
+- {pattern: '^(data\.)?(srcuser|dstuser|src_user|dst_user)$', action: mask, kind: user}
+- {pattern: '^data\.win\.eventdata\..*user(name)?$', action: mask, kind: user}
+- {pattern: '^data\.win\.eventdata\..*domain(name)?$', action: mask, kind: windomain}
+- {pattern: '^data\.win\.system\.computer$', action: mask, kind: endpoint}
+- {pattern: '^(agent\.name|predecoder\.hostname|manager\.name|cluster\.(name|node))$', action: mask, kind: endpoint}
+- {pattern: '^(agent\.ip|data\.(srcip|dstip|src_ip|dst_ip)|data\.aws\.sourceipaddress)$', action: mask, kind: ip}
+- {pattern: '^agent\.id$', action: mask, kind: opaque}
+- {pattern: '^(full_log|previous_log|data\.title|data\.win\.system\.message)$', action: text}
+- {pattern: '^(syscheck\.(path|.*_after|.*_before|event)|data\.file|data\.url|data\.virustotal\..*)$', action: keep}
+- {pattern: '^(rule\..*|decoder\..*|location|input\.type|timestamp|id|data\.(status|action|protocol|id|level))$', action: keep}
+- {pattern: '^(data\.srcport|data\.dstport|data\.(aws|office365|gcp)\.(eventname|eventsource|actor|operation))$', action: keep}
+header_hints: [rule.description, agent.name, full_log]
+notes: alerts.json (campi annidati con punto) o export Kibana. full_log passa dallo scrub testo; percorsi/hash syscheck = IOC.

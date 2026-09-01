@@ -1,0 +1,1 @@
+{"machine_id":"machine-42","machine_name":"pc01.contoso.local","machine_ip":"10.0.0.15","alert_type":"malware","user_name":"mrossi","file_path":"C:\\Users\\mrossi\\Downloads\\sample.exe","severity":"high","protection_status":"protected"}

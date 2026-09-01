@@ -1,0 +1,23 @@
+id: aws_cloudtrail
+label: AWS CloudTrail
+version: 2026.07.1
+aliases: [cloudtrail, aws_trail]
+fingerprints:
+- {pattern: '^useridentity\.arn$', weight: 8}
+- {pattern: '^recipientaccountid$', weight: 8}
+- {pattern: '^eventsource$', weight: 5}
+- {pattern: '^awsregion$', weight: 4}
+- {pattern: '^sourceipaddress$', weight: 4}
+- {pattern: '^eventname$', weight: 2}
+- {pattern: '^useridentity\..*$', weight: 4}
+rules:
+- {pattern: '^useridentity\.(username|sessioncontext\.sessionissuer\.username)$', action: mask, kind: user}
+- {pattern: '^useridentity\.(arn|principalid|accountid|accesskeyid|sessioncontext\.sessionissuer\.(arn|principalid|accountid))$', action: mask, kind: opaque}
+- {pattern: '^useridentity(\.type|\.invokedby|\.sessioncontext\.(attributes\..*|sessionissuer\.type))?$', action: text}
+- {pattern: '^(recipientaccountid|sharedeventid|vpcendpointid)$', action: mask, kind: opaque}
+- {pattern: '^sourceipaddress$', action: mask, kind: ip}
+- {pattern: '^(requestparameters|responseelements|serviceeventdetails|resources)(\..*)?$', action: text}
+- {pattern: '^(errormessage|additionaleventdata(\..*)?|tlsdetails(\..*)?)$', action: text}
+- {pattern: '^(eventtime|eventversion|eventsource|eventname|awsregion|useragent|errorcode|requestid|eventid|eventtype|eventcategory|managementevent|readonly|apiversion)$', action: keep}
+header_hints: [eventTime, eventSource, eventName]
+notes: JSON CloudTrail (annidato, chiavi con punto) o CSV Athena. ARN/account/access-key identificano il cliente (mask opaque); request/response passano dallo scrub testo.

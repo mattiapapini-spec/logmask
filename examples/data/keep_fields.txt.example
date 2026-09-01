@@ -1,0 +1,8 @@
+# LogMask - colonne extra da tenere in chiaro in modalita' Safe (config runtime).
+# Copia in data/keep_fields.txt. Un nome colonna per riga; commenti ignorati.
+# Il nome e' normalizzato (minuscole, spazi -> underscore): "Event Type" ==
+# event_type. ATTENZIONE fail-closed: aggiungi solo campi che NON possono
+# contenere dati identificativi. Si somma a LOGMASK_KEEP_FIELDS.
+event_type
+severity
+rule_name

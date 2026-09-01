@@ -1,0 +1,128 @@
+id: microsoft_entra
+label: Microsoft Entra ID
+version: 2026.07.1
+aliases:
+- entra
+- azuread
+- azure ad
+- aad
+- entra id
+fingerprints:
+- pattern: ^accesso_condizionale$
+  weight: 4
+- pattern: ^requisito_per_l'autenticazione$
+  weight: 4
+- pattern: ^risultato_dell'autenticazione_a_pi\xf9_fattori$
+  weight: 4
+- pattern: ^numero_del_sistema_autonomo$
+  weight: 4
+- pattern: ^contrassegnato_per_la_revisione$
+  weight: 3
+- pattern: ^tipo_di_token_in_ingresso$
+  weight: 3
+- pattern: ^tramite_l'accesso_globale_sicuro$
+  weight: 3
+- pattern: ^target\d+modifiedproperty\d+newvalue$
+  weight: 4
+- pattern: ^additionaldetail\d+key$
+  weight: 3
+- pattern: ^operazione_completata$
+  weight: 2
+- pattern: ^actoruserprincipalname$
+  weight: 3
+- pattern: ^metodo_di_autenticazione$
+  weight: 3
+- pattern: ^dettagli_del_metodo_di_autenticazione$
+  weight: 4
+- pattern: ^dettagli_del_risultato$
+  weight: 3
+- pattern: ^authentication_requirement$
+  weight: 4
+- pattern: ^conditional_access$
+  weight: 4
+- pattern: ^multifactor_authentication_result$
+  weight: 4
+- pattern: ^autonomous_system_number$
+  weight: 4
+- pattern: ^flagged_for_review$
+  weight: 3
+- pattern: ^incoming_token_type$
+  weight: 3
+- pattern: ^through_global_secure_access$
+  weight: 3
+- pattern: ^sign-in_identifier$
+  weight: 4
+- pattern: ^actor_user_principal_name$
+  weight: 5
+- pattern: ^target\d+_user_principal_name$
+  weight: 5
+- pattern: ^result_reason$
+  weight: 3
+rules:
+- pattern: ^data(_.*)?$
+  action: keep
+- pattern: .*\(utc\)$
+  action: keep
+- pattern: ^(nome_utente|.*userprincipalname)$
+  action: mask
+  kind: email
+# v0.27.2: il nome del dispositivo e' un HOST, non un utente. Va prima della
+# regola generica .*displayname, altrimenti diventerebbe usr-.
+- pattern: ^(.*device.*displayname|devicedisplayname|nome_dispositivo|.*_device_name|nome_del_dispositivo)$
+  action: mask
+  kind: fqdn
+- pattern: ^(utente|.*displayname)$
+  action: mask
+  kind: user
+- pattern: ^(indirizzo_ip.*|ipaddress)$
+  action: mask
+  kind: ip
+# v0.27.2: la posizione (citta'/provincia/coordinate) identifica; il paese e'
+# grossolano e resta leggibile.
+- pattern: ^(.*location.*(city|state|geocoordinates.*|latitude|longitude)|citt\xe0|provincia|localit\xe0.*)$
+  action: mask
+  kind: opaque
+- pattern: ^(nome_del_tenant.*|nome_dell'entit\xe0.*|.*serviceprincipalname)$
+  action: mask
+  kind: opaque
+- pattern: ^(id_.*|.*_id|.*objectid|correlationid|.*serviceprincipalid|.*tenantid|identificatore_.*|identificazione_.*)$
+  action: mask
+  kind: opaque
+- pattern: ^(.*(new|old)value|.*modifiedproperty\d+name|additionaldetail\d+value|motivo_dell'errore|dettagli.*|resultreason|applicazione|risorsa)$
+  action: text
+- pattern: ^(username|user_name|.*user_principal_name|sign-in_identifier)$
+  action: mask
+  kind: email
+- pattern: ^(user|.*_display_name)$
+  action: mask
+  kind: user
+- pattern: ^ip_address.*$
+  action: mask
+  kind: ip
+- pattern: ^(home_tenant_name|token_issuer_name)$
+  action: mask
+  kind: opaque
+- pattern: ^(failure_reason|result_reason|status_reason)$
+  action: text
+# v0.27.2: campi operativi noti (EN + IT) tenuti leggibili PRIMA del catch-all,
+# cosi' un export tipico resta leggibile mentre i campi davvero sconosciuti
+# passano dal 'text' fail-safe qui sotto.
+- pattern: ^(status|stato|severity|gravit\xe0|result|risultato|risk.*|browser|sistema_operativo|operating_?system|category|categoria|conditional_access|accesso_condizionale|authentication_requirement|requisito_per_l'autenticazione|authentication_method|metodo_di_autenticazione|dettagli_del_metodo_di_autenticazione|multifactor_authentication_result|risultato_dell'autenticazione_a_pi\xf9_fattori|autonomous_system_number|numero_del_sistema_autonomo|flagged_for_review|contrassegnato_per_la_revisione|incoming_token_type|tipo_di_token_in_ingresso|through_global_secure_access|tramite_l'accesso_globale_sicuro|operazione_completata|dettagli_del_risultato|client_app_used|applicazione_client|tipo_di_client|is_interactive)$
+  action: keep
+# v0.27.2: il catch-all era 'keep' - e siccome e' una regola del kit, il Safe
+# mode NON lo elideva: OGNI campo Entra non riconosciuto (anche futuro o
+# custom) restava in chiaro, annullando il fail-closed. Ora e' 'text': un
+# campo sconosciuto viene processato come testo libero, quindi qualunque
+# identita' al suo interno (IP, e-mail, host, dominio\\utente, nome persona,
+# nome cliente) viene mascherata, mentre il contenuto operativo resta
+# leggibile. Molto piu' sicuro di 'keep' senza svuotare i log densi di Entra.
+- pattern: .*
+  action: text
+header_hints:
+- entra
+- azure ad
+- azuread
+- sign-in
+- signinlogs
+- auditlogs
+notes: Microsoft Entra ID (Azure AD) sign-in and audit logs; export con intestazioni italiane E inglesi.

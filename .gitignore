@@ -1,0 +1,31 @@
+# --- runtime data: MAI nel repo (vault, chiavi, config con nomi reali) ---
+/data/
+*.db
+*.key
+bootstrap-admin.txt
+field_overrides.json
+
+# --- ambiente e segreti ---
+.env
+.env.*
+!.env.example
+
+# --- artefatti di build e pacchetti ---
+*.zip
+*.tar
+*.tar.gz
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+dist/
+build/
+
+# --- file di lavoro temporanei ---
+*.tmp
+*.bak
+_probe.txt
+.__wtest
+patch_blocks/
+aggiorna-*.bat

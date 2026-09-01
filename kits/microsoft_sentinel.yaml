@@ -1,0 +1,27 @@
+id: microsoft_sentinel
+label: Microsoft Sentinel (KQL export)
+version: 2026.07.1
+aliases: [sentinel, azure_sentinel, kql, log_analytics]
+fingerprints:
+- {pattern: '^timegenerated(_\[utc\])?$', weight: 5}
+- {pattern: '^compromisedentity$', weight: 8}
+- {pattern: '^_resourceid$', weight: 8}
+- {pattern: '^sourcecomputerid$', weight: 8}
+- {pattern: '^alertseverity$', weight: 5}
+- {pattern: '^workstationname$', weight: 4}
+- {pattern: '^subjectusername$', weight: 4}
+- {pattern: '^tenantid$', weight: 3}
+- {pattern: '^systemalertid$', weight: 6}
+rules:
+- {pattern: '^(account|targetaccount|subjectaccount)$', action: mask, kind: winuser}
+- {pattern: '^(targetusername|subjectusername|accountname|caller)$', action: mask, kind: user}
+- {pattern: '^(targetdomainname|subjectdomainname|accountdomain)$', action: mask, kind: windomain}
+- {pattern: '^(targetusersid|subjectusersid|sid)$', action: mask, kind: sid}
+- {pattern: '^(computer|workstationname|compromisedentity|srccomputername|remotehost)$', action: mask, kind: endpoint}
+- {pattern: '^(ipaddress|clientip|calleripaddress|srcipaddr|dstipaddr)$', action: mask, kind: ip}
+- {pattern: '^(tenantid|systemalertid|sourcecomputerid|_resourceid|workspaceid|subscriptionid|alertlink|resourceid)$', action: mask, kind: opaque}
+- {pattern: '^(entities|extendedproperties|description|activity|commandline|processcommandline)$', action: text}
+- {pattern: '^(process(name)?|parentprocessname|newprocessname|filehash.*|sha256|md5|url|remoteurl)$', action: keep}
+- {pattern: '^(timegenerated.*|eventid|alertname|alertseverity|providername|vendorname|productname|tactics|techniques|status|logontype|logonprocessname|authenticationpackagename|eventsourcename|channel|type|sourcesystem)$', action: keep}
+header_hints: [TimeGenerated, Computer, Account]
+notes: Export CSV dei risultati KQL (SecurityEvent/SecurityAlert). Gli ID workspace/tenant/resource identificano il cliente (mask opaque); per i sign-in di Entra c'e' il kit microsoft_entra.

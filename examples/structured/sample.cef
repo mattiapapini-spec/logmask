@@ -1,0 +1,2 @@
+CEF:0|Palo Alto Networks|Cortex XDR|1.0|1001|Login user=mrossi|7|src=192.168.10.25 suser=mrossi dhost=srv-01.example.com action=login
+CEF:0|Microsoft|Defender XDR|1.0|1002|Connection user=lbianchi|5|src=192.168.10.26 suser=lbianchi dhost=dc-01.example.com action=allow

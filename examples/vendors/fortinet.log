@@ -1,0 +1,1 @@
+date=2026-07-12 time=20:00:00 devname=FGT-01 logid=0000000013 type=traffic subtype=forward srcip=10.0.0.15 srcport=51422 dstip=8.8.8.8 dstport=443 srcuser=mrossi action=accept policyid=12 msg="Allowed connection from mrossi"

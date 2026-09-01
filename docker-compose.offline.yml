@@ -1,0 +1,29 @@
+# LogMask - deploy OFFLINE (aria compressa / VM senza internet).
+# Usa un'immagine gia' costruita e caricata con `docker load`, invece di
+# scaricare la base da Docker Hub e ricostruire.
+#
+# Uso sulla VM:
+#   sudo docker load -i logmask-0.27.2.tar
+#   sudo docker compose -f docker-compose.offline.yml up -d
+#
+# L'immagine deve avere il tag 'logmask:0.27.2' (vedi comando docker save).
+services:
+  logmask:
+    image: logmask:0.27.2
+    container_name: logmask
+    ports:
+      - "${LOGMASK_BIND:-0.0.0.0}:${LOGMASK_PORT:-8090}:8080"
+    environment:
+      LOGMASK_DATA: /data
+      LOGMASK_ADMIN_USER: "${LOGMASK_ADMIN_USER:-admin}"
+      LOGMASK_ADMIN_PASSWORD: "${LOGMASK_ADMIN_PASSWORD:-}"
+      LOGMASK_COOKIE_SECURE: "${LOGMASK_COOKIE_SECURE:-false}"
+      LOGMASK_SESSION_IDLE_SECONDS: "${LOGMASK_SESSION_IDLE_SECONDS:-1800}"
+      LOGMASK_SESSION_MAX_SECONDS: "${LOGMASK_SESSION_MAX_SECONDS:-28800}"
+      LOGMASK_LOGIN_MAX_FAILURES: "${LOGMASK_LOGIN_MAX_FAILURES:-5}"
+      LOGMASK_LOGIN_WINDOW_SECONDS: "${LOGMASK_LOGIN_WINDOW_SECONDS:-900}"
+      LOGMASK_MAX_BODY_BYTES: "${LOGMASK_MAX_BODY_BYTES:-12582912}"
+      LOGMASK_MAX_FILE_BYTES: "${LOGMASK_MAX_FILE_BYTES:-8388608}"
+    volumes:
+      - ./data:/data
+    restart: unless-stopped

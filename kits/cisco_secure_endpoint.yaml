@@ -1,0 +1,42 @@
+id: cisco_secure_endpoint
+label: Cisco Secure Endpoint / SecureX
+version: '2026.07'
+aliases:
+- cisco_amp
+- amp
+- secure_endpoint
+fingerprints:
+- pattern: ^connector_guid$
+  weight: 5
+- pattern: ^computer_hostname$
+  weight: 5
+- pattern: ^event_type_id$
+  weight: 3
+- pattern: ^detection$
+  weight: 2
+- pattern: ^trajectory$
+  weight: 2
+rules:
+- pattern: ^(computer_hostname|hostname|device_name|connector_name)$
+  action: mask
+  kind: endpoint
+- pattern: ^(computer_ip|external_ip|internal_ip|source_ip|destination_ip|src_ip|dst_ip)$
+  action: mask
+  kind: ip
+- pattern: ^(user|username|user_name|account_name)$
+  action: mask
+  kind: user
+- pattern: ^(command_line|file_path|parent_file_path|url|message|description|network_connections)$
+  action: text
+- pattern: ^(connector_guid|group_guid|tenant_guid|computer_guid)$
+  action: mask
+  kind: opaque
+- pattern: ^(event_type_id|event_type|severity|disposition|detection|timestamp|date|file_name|process_id|parent_process_id)$
+  action: keep
+- pattern: ^(sha1|sha256|md5|file_hash)$
+  action: keep
+header_hints:
+- cisco secure endpoint
+- cisco amp
+- securex
+notes: ''

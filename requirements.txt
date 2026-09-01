@@ -1,0 +1,9 @@
+fastapi>=0.115,<1
+uvicorn[standard]>=0.30,<1
+cryptography>=42,<47
+pydantic>=2.7,<3
+argon2-cffi>=23.1,<26
+python-multipart>=0.0.9,<1
+PyYAML>=6,<7
+# v0.26.0: PDF. AGPL-3.0 - vedi NOTICE nel CHANGELOG.
+pymupdf>=1.24,<2

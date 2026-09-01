@@ -1,0 +1,8 @@
+nome: Mario Rossi
+telefono: +39 333 123 4567
+codice_fiscale: RSSMRA80A01H501U
+iban: IT60X0542811101000000123456
+indirizzo: Via Roma 10, Grosseto
+password=ExampleSecret-Do-Not-Use
+azure_tenant_id=550e8400-e29b-41d4-a716-446655440000
+callback=https://example.invalid/callback?access_token=example-token-123456

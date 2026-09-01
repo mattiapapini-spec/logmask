@@ -1,0 +1,1 @@
+{"modelName":"Unusual External Connection","breachScore":72,"deviceId":"device-42","sourceIp":"10.0.0.15","destinationIp":"8.8.8.8","username":"mrossi","risk_score":80,"description":"User mrossi connected to 8.8.8.8"}

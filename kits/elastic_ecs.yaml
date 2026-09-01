@@ -1,0 +1,145 @@
+id: elastic_ecs
+label: Elastic Common Schema (ECS)
+version: 9.4-compatible
+aliases:
+- ecs
+- elastic
+- elasticsearch
+fingerprints:
+- pattern: ^@timestamp$
+  weight: 3
+- pattern: ^event\.dataset$
+  weight: 4
+- pattern: ^source\.ip$
+  weight: 4
+- pattern: ^destination\.ip$
+  weight: 4
+- pattern: ^host\.name$
+  weight: 4
+- pattern: ^user\.name$
+  weight: 4
+- pattern: ^ecs\.version$
+  weight: 5
+- pattern: ^data_stream\.dataset$
+  weight: 3
+rules:
+- pattern: .*\.(nat\.)?ip$
+  action: mask
+  kind: ip
+- pattern: ^related\.ip$
+  action: mask
+  kind: ip
+- pattern: .*\.mac$
+  action: mask
+  kind: mac
+- pattern: .*\.address$
+  action: mask
+  kind: endpoint
+- pattern: .*user\.(name|id|full_name)$
+  action: mask
+  kind: user
+- pattern: .*\.(created_by|updated_by)$
+  action: mask
+  kind: user
+- pattern: ^(kibana\.alert\.rule\.(author|created_by|updated_by)|kibana\.alert\.rule\.parameters\.author)$
+  action: mask
+  kind: user
+- pattern: .*user\.email$
+  action: mask
+  kind: email
+- pattern: .*user\.domain$
+  action: mask
+  kind: windomain
+- pattern: ^related\.user$
+  action: mask
+  kind: user
+- pattern: ^related\.hosts$
+  action: mask
+  kind: fqdn
+- pattern: .*\.(hostname|fqdn)$
+  action: mask
+  kind: fqdn
+- pattern: ^(host\.name|winlog\.computer_name|observer\.name|agent\.name)$
+  action: mask
+  kind: fqdn
+- pattern: .*\.(domain|registered_domain)$
+  action: mask
+  kind: fqdn
+- pattern: ^dns\.question\.name$
+  action: mask
+  kind: fqdn
+- pattern: ^dns\.answers\.(name|data)$
+  action: mask
+  kind: endpoint
+- pattern: ^email\.(from|to|cc|bcc|sender|reply_to)\.address$
+  action: mask
+  kind: email
+- pattern: ^(url\.(full|original|original\.text|path|query|fragment)|http\.request\.referrer|kibana\.alert\.url|kibana\.alert\.rule\.meta\.kibana_siem_app_url|kibana\.alert\.rule\.parameters\.meta\.kibana_siem_app_url|kibana\.alert\.rule\.(references|false_positives|parameters\.references|parameters\.false_positives)|kibana\.alert\.reason|kibana\.alert\.reason\.text)$
+  action: text
+- pattern: ^url\.(scheme|extension)$
+  action: keep
+- pattern: .*investigation_fields\.field_names.*
+  action: keep
+- pattern: .*\.(command_line|args|executable|working_directory)$
+  action: text
+- pattern: ^(file\.(path|directory|target_path)|registry\.(key|path|value)|message|event\.original|error\.message)$
+  action: text
+- pattern: ^(_id|_index|agent\.id|elastic_agent\.id|agent\.ephemeral_id|host\.id|device\.id|cloud\.account\.id|cloud\.instance\.id|container\.id|orchestrator\.resource\.id|kibana\.alert\.(uuid|ancestors\.id)|kibana\.alert\.rule\.(rule_id|uuid|exceptions_list\.(id|list_id)|parameters\.rule_id|parameters\.exceptions_list\.(id|list_id)))$
+  action: mask
+  kind: opaque
+- pattern: ^event\.id$
+  action: mask
+  kind: opaque
+- pattern: ^(@timestamp|_score|event\.(action|category|kind|type|outcome|severity|code|dataset|module|agent_id_status|created|ingested)|ecs\.version|data_stream\..*|agent\.type|input\.type|log\.level|tags|threat\.framework|threat\.technique\.id|network\.(transport|protocol|type|direction)|source\.port|destination\.port|kibana\.(version|space_ids)|kibana\.alert\.(start|last_detected|original_time|intended_timestamp|status|workflow_status|depth|severity|risk_score)|kibana\.alert\.ancestors\.(type|index|depth)|kibana\.alert\.rule\.(category|consumer|producer|created_at|revision|risk_score|severity|enabled|immutable|interval|from|to|type|execution\.type|parameters\.(risk_score|severity|from|to|type|language|index|related_integrations\.package|rule_source\.type|max_signals)|max_signals|indices|tags|version|license|rule_name_override|parameters\.rule_name_override|parameters\.timestamp_override|timestamp_override|exceptions_list\.(type|namespace_type)|parameters\.exceptions_list\.(type|namespace_type)))$
+  action: keep
+- pattern: ^(hash\..*|file\.hash\..*|process\.hash\..*)$
+  action: keep
+- pattern: ^source\.as\.organization\.name$
+  action: keep
+- pattern: .*(customer[._]?prefix|company[._]?name|organization[._]?name|organisation[._]?name|org[._]?name|organization[._]?code|organization[._]?id|tenant[._]?name|\.key)$
+  action: mask
+  kind: opaque
+- pattern: .*\.(job_position|job_title|office_location|department|manager|employee_id)$
+  action: text
+- pattern: ^(group\.name|device\.name|cloud\.instance\.name)$
+  action: mask
+  kind: endpoint
+- pattern: .*\.(resource_name|resource_arn|groupname)$
+  action: text
+- pattern: .*(file\.name|filename|file_name|previousfilename|originalfilepath|dloriginalfilepath|attachments\.file\.name)$
+  action: text
+- pattern: .*\.(owner|ownerid|owner_id)$
+  action: mask
+  kind: user
+- pattern: ^o365audit\.emailinfo\.(bcc|cc|to|from)$
+  action: mask
+  kind: email
+- pattern: .*\.(sender|receivers|recipient|recipients)$
+  action: mask
+  kind: email
+- pattern: .*\.(subject)$
+  action: text
+- pattern: .*\.(title|detail|description|reason|remediation|annotation|actorinfostring|labelname|text|reference)$
+  action: text
+- pattern: .*\.(cidrip|cidr_ip)$
+  action: mask
+  kind: ip
+- pattern: .*(created|updated|createdat|updatedat|observedat|processedat|firstobservedat|lastobservedat|appliedat|datetime|ts_min|ts_max|last_seen|first_seen|\.start|\.end)$
+  action: keep
+- pattern: .*(_id|\.id|objectid|guid|uuid|incidentid|findingid|generatorid|message_id|immutable_id|folder\.id)$
+  action: mask
+  kind: opaque
+- pattern: ^o365_ip$
+  action: mask
+  kind: ip
+- pattern: ^_ignored$
+  action: keep
+- pattern: ^[\w@]+\..*$
+  action: keep
+header_hints:
+- elastic
+- ecs
+- elasticsearch
+- winlogbeat
+- filebeat
+notes: Elastic Common Schema field sets and common Beats/Agent exports.
