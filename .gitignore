@@ -29,3 +29,4 @@ _probe.txt
 .__wtest
 patch_blocks/
 aggiorna-*.bat
+*.egg-info/
