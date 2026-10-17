@@ -35,7 +35,13 @@ from pathlib import Path
 
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
-from vendor_kits import canonical_kit_id, detect_vendor_kit, kit_catalogs, match_rule
+from vendor_kits import (
+    bundled_data_dir,
+    canonical_kit_id,
+    detect_vendor_kit,
+    kit_catalogs,
+    match_rule,
+)
 from dlp import (
     WELL_KNOWN_GUIDS,
     apply as apply_dlp,
@@ -634,7 +640,7 @@ def _host_term_pattern(term: str) -> str:
 
 # ---------------------------------------------- nomi di persona (v0.19.0)
 
-BUNDLED_PERSONS_DIR = Path(__file__).resolve().parent / "persons"
+BUNDLED_PERSONS_DIR = bundled_data_dir("persons")
 USER_PERSONS_DIR = Path(os.environ.get(
     "LOGMASK_PERSONS_DIR",
     os.path.join(os.environ.get("LOGMASK_DATA", "data"), "persons")))

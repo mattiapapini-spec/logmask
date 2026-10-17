@@ -39,7 +39,33 @@ class VendorKit:
 # Kinds accepted by logmask: ip, mac, email, user, fqdn, winuser,
 # windomain, sid, endpoint, text. "keep" rules are limited to operational
 # metadata that is useful for SOC analysis and not identifying by itself.
-BUNDLED_KITS_DIR = Path(__file__).resolve().parent / "kits"
+def bundled_data_dir(name: str) -> Path:
+    """Directory dei dati bundled (kits/, persons/).
+
+    Dal repo (sorgente, Docker) e' la cartella accanto al modulo. Da pacchetto
+    installato (pip, v0.27.7) e' il package dati ``logmask_<name>``. Se non si
+    trova da nessuna parte e' un errore esplicito: senza kit e liste persone il
+    mascheramento perderebbe precisione in silenzio.
+    """
+    local = Path(__file__).resolve().parent / name
+    if local.is_dir():
+        return local
+    # package dati senza __init__ (namespace): la directory reale e' in
+    # submodule_search_locations; importlib.resources.files() restituirebbe un
+    # MultiplexedPath non convertibile in Path.
+    from importlib.util import find_spec
+    try:
+        spec = find_spec(f"logmask_{name}")
+    except (ImportError, ValueError):
+        spec = None
+    for location in (spec.submodule_search_locations or []) if spec else []:
+        if Path(location).is_dir():
+            return Path(location)
+    raise FileNotFoundError(
+        f"dati bundled '{name}' non trovati: ne' {local} ne' il package logmask_{name}")
+
+
+BUNDLED_KITS_DIR = bundled_data_dir("kits")
 USER_KITS_DIR = Path(os.environ.get(
     "LOGMASK_KITS_DIR", os.path.join(os.environ.get("LOGMASK_DATA", "data"), "kits")))
 
