@@ -19,6 +19,6 @@ VOLUME /data
 # release non invalida la cache delle dipendenze e un rebuild senza modifiche
 # ai requirements resta interamente servito dalla cache (niente rete).
 LABEL org.opencontainers.image.title="logmask-web" \
-      org.opencontainers.image.version="0.27.7"
+      org.opencontainers.image.version="0.27.8"
 EXPOSE 8080
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8080", "--no-access-log"]

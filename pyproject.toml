@@ -1,0 +1,39 @@
+# v0.27.8: logmask installabile come libreria (uso in-process da altri strumenti).
+# Il servizio web (app.py, auth.py) e i moduli documentali (pdf/docx/pst) restano
+# fuori dalla libreria: si usano dal repo o dal container come prima.
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "logmask"
+dynamic = ["version"]
+description = "Reversible, fail-closed pseudonymization of SOC logs"
+readme = "README.md"
+license = "AGPL-3.0-only"
+license-files = ["LICENSE"]
+authors = [{ name = "Mattia Papini" }]
+requires-python = ">=3.11"
+dependencies = [
+  "cryptography>=42,<47",
+  "PyYAML>=6,<7",
+]
+
+[project.scripts]
+logmask = "logmask:main"
+
+[tool.setuptools]
+py-modules = ["logmask", "vendor_kits", "dlp", "structured"]
+packages = ["logmask_kits", "logmask_persons"]
+include-package-data = false
+
+[tool.setuptools.package-dir]
+logmask_kits = "kits"
+logmask_persons = "persons"
+
+[tool.setuptools.package-data]
+logmask_kits = ["*.yaml", "*.yml"]
+logmask_persons = ["*.txt"]
+
+[tool.setuptools.dynamic]
+version = { file = "VERSION" }

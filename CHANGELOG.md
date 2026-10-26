@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.27.8 - logmask installabile come libreria
+
+- **pyproject.toml**: logmask si installa con pip (anche da git con un tag
+  fissato) e si importa in-process da altri strumenti. La libreria contiene
+  il motore (logmask, structured, vendor_kits, dlp), i kit vendor e le liste
+  persone, e installa il comando `logmask`. Servizio web e moduli documentali
+  restano fuori: niente moduli `app`/`auth` nel namespace di chi installa.
+- **Dati bundled trovati anche da pacchetto.** kits/ e persons/ venivano
+  cercati solo accanto al modulo: da installato la cartella non c'era, il
+  registro kit restava vuoto e le liste persone pure, senza nessun errore.
+  Ora si cercano prima nel repo e poi nei package dati logmask_kits e
+  logmask_persons; se non ci sono da nessuna parte l'import fallisce con un
+  messaggio chiaro invece di mascherare peggio in silenzio.
+- Nuovi test (tests/test_packaging.py): costruiscono il wheel, lo installano
+  in un venv pulito e verificano, fuori dal repo, kit caricati, liste persone
+  identiche e round-trip completo. Saltati se manca setuptools>=77.
+- Docker e uso dal repo invariati.
+
 ## 0.27.7 - docx: elenchi nelle celle mascherati per intero; repo senza dati reali
 
 - **Bug**: in un .docx, una cella di tabella con piu' valori in elenco

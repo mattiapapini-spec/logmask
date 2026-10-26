@@ -206,6 +206,32 @@ python logmask.py --key data/master.key --vault data/vault.db deanonymize `
   --tenant acme --format auto output.json -o restored.json
 ```
 
+## Uso come libreria (0.27.8)
+
+LogMask si installa anche come libreria Python, per usarlo in-process da altri
+strumenti senza passare dal servizio web:
+
+```bash
+pip install "logmask @ git+https://github.com/mattiapapini-spec/logmask@v0.27.8"
+```
+
+La libreria contiene il motore (`logmask`, `structured`, `vendor_kits`, `dlp`),
+i kit vendor e le liste persone; la CLI resta disponibile come comando
+`logmask`. Il servizio web (`app.py`, `auth.py`) e i moduli documentali
+(PDF/DOCX/PST) non fanno parte della libreria: si usano dal repo o dal
+container come prima. Se kit o liste persone non vengono trovati l'import
+fallisce in modo esplicito, invece di proseguire con un mascheramento meno
+preciso.
+
+```python
+from logmask import Vault, Anonymizer, Deanonymizer, Options, ORDER
+
+vault = Vault(path_vault, master_key)
+opt = Options(keep_scope=True, preserve_subnet=True)
+masked = Anonymizer(vault, set(ORDER), opt).process(testo)
+original = Deanonymizer(vault, opt).process(masked)
+```
+
 ## Ruoli
 
 | Ruolo | Anonimizza | Report | Reverse | Utenti/audit |

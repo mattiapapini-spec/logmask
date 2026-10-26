@@ -71,7 +71,7 @@ from structured import (
     transpose_keyvalue_csv,
 )
 
-VERSION = "0.27.7"
+VERSION = "0.27.8"
 DATA = Path(os.environ.get("LOGMASK_DATA", "./data"))
 KEY_PATH = Path(os.environ.get("LOGMASK_KEY_FILE", str(DATA / "master.key")))
 VAULT_PATH = DATA / "vault.db"  # reserved for the pre-v0.3 `legacy` tenant
