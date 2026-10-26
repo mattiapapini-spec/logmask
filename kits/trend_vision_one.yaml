@@ -1,0 +1,92 @@
+id: trend_vision_one
+label: Trend Micro Vision One / Apex One
+version: '2026.07'
+aliases:
+- trend
+- visionone
+- apexone
+- tmv1
+fingerprints:
+- pattern: ^endpointname$
+  weight: 5
+- pattern: ^endpointguid$
+  weight: 4
+- pattern: ^eventid$
+  weight: 2
+- pattern: ^eventname$
+  weight: 2
+- pattern: ^objectfilename$
+  weight: 4
+- pattern: ^objectfilepath$
+  weight: 4
+- pattern: ^detectionname$
+  weight: 4
+- pattern: ^productcode$
+  weight: 3
+- pattern: ^risklevel$
+  weight: 2
+- pattern: .*trend_micro_vision_one\.alert.*
+  weight: 12
+- pattern: ^event\.dataset$
+  weight: 1
+rules:
+- pattern: ^(endpoint|host|computer|machine)(name|hostname)$
+  action: mask
+  kind: endpoint
+- pattern: ^(endpoint|host|source|destination|src|dst|client|server)(ip|ipaddress|ipv4|ipv6)$
+  action: mask
+  kind: ip
+- pattern: ^(srcip|dstip|sourceip|destinationip|ipaddress)$
+  action: mask
+  kind: ip
+- pattern: ^(username|user_name|accountname|logonuser|userprincipalname)$
+  action: mask
+  kind: user
+- pattern: ^(account_value|.*\.account_value)$
+  action: mask
+  kind: winuser
+- pattern: ^(endpointname|host(name)?|computername|machine(name)?|.*\.value\.name)$
+  action: mask
+  kind: endpoint
+- pattern: ^(created_by|updated_by|.*\.(created_by|updated_by))$
+  action: mask
+  kind: user
+- pattern: .*(email|mailaddress)$
+  action: mask
+  kind: email
+- pattern: .*(domainname|domain)$
+  action: mask
+  kind: windomain
+- pattern: .*(macaddress|mac)$
+  action: mask
+  kind: mac
+- pattern: ^(objectfilepath|objectfolderpath|processcommandline|parentcommandline|commandline|objectcmd|processcmd|parentcmd|registrykey|registryvalue|url|requesturl|objecturl|workbench_link|.*\.workbench_link|investigation_result|.*\.investigation_result)$
+  action: text
+- pattern: ^(message|description|eventdescription|.*\.message|.*\.description|.*\.reason|.*\.reason\.text)$
+  action: text
+- pattern: ^(.*\.indicators\.value|indicators\.value|value)$
+  action: text
+- pattern: ^(.*\.matched_rule.*\.name|.*\.filter.*\.name|matched_rule.*\.name|filter.*\.name|model|.*\.model)$
+  action: keep
+- pattern: ^(.*investigation_fields\.field_names.*|field_names)$
+  action: keep
+- pattern: ^(mitre_technique_id|.*\.mitre_technique_id|provenance|.*\.provenance|field|.*\.field)$
+  action: keep
+- pattern: ^(endpointguid|endpointid|tenantid|customerid|policyname|alertid|incidentid|incident_id|alert_id|model_id|rule_id|filter_id|guid|uuid|id|.*(_id|\.id)|.*related_entities.*|.*related_indicator_id.*|management_scope_.*)$
+  action: mask
+  kind: opaque
+- pattern: ^(eventid|eventname|eventtype|eventsubtype|productcode|productname|detectionname|threatname|risklevel|severity|action|actionresult|scanType|ruleid)$
+  action: keep
+- pattern: ^(schema_version|investigation_status|status|alert_provider|model|model_type|score|type|field|provenance|mitre_technique_id|.*\.(schema_version|investigation_status|status|alert_provider|model|model_type|type|field|provenance|mitre_technique_id))$
+  action: keep
+- pattern: ^(eventtime|eventtimestamp|detecteddate|createddate|updateddate|firstseen|lastseen)$
+  action: keep
+- pattern: ^(sha1|sha256|md5|objecthash|filehash)$
+  action: keep
+- pattern: ^(objectfilename|processname|parentprocessname|filename|filetype|filesize)$
+  action: keep
+header_hints:
+- trend micro
+- vision one
+- apex one
+notes: Vision One Search/App exports, alert payloads and Apex One event fields.

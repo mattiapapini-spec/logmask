@@ -1,0 +1,42 @@
+id: sophos
+label: Sophos Central / XDR
+version: '2026.07'
+aliases:
+- sophos_central
+fingerprints:
+- pattern: ^endpoint_hostname$
+  weight: 5
+- pattern: ^endpoint_id$
+  weight: 3
+- pattern: ^threat_name$
+  weight: 4
+- pattern: ^customer_id$
+  weight: 2
+- pattern: ^event_service$
+  weight: 2
+rules:
+- pattern: ^(endpoint_hostname|hostname|computer_name|device_name)$
+  action: mask
+  kind: endpoint
+- pattern: ^(endpoint_ip|source_ip|destination_ip|src_ip|dst_ip|local_ip|remote_ip)$
+  action: mask
+  kind: ip
+- pattern: ^(user_name|username|account_name|source_user|destination_user)$
+  action: mask
+  kind: user
+- pattern: ^(user_email|email|sender|recipient)$
+  action: mask
+  kind: email
+- pattern: ^(command_line|process_path|file_path|url|message|description|location)$
+  action: text
+- pattern: ^(endpoint_id|customer_id|tenant_id|device_id|event_id)$
+  action: mask
+  kind: opaque
+- pattern: ^(event_type|event_service|severity|threat_name|threat_type|action|status|created_at|when|source|category)$
+  action: keep
+- pattern: ^(sha1|sha256|md5|file_hash)$
+  action: keep
+header_hints:
+- sophos
+- sophos central
+notes: ''

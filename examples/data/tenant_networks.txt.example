@@ -1,0 +1,7 @@
+# LogMask - reti del tenant/cliente (config runtime).
+# Copia in data/tenant_networks.txt. Una rete CIDR per riga; commenti ignorati.
+# Gli IP in queste reti vengono mascherati anche con ip_mode=internal
+# (es. IP pubblici intestati al cliente). Si somma a LOGMASK_TENANT_NETWORKS.
+203.0.113.0/24
+198.51.100.0/25
+2001:db8:acme::/48

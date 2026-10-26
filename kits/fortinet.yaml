@@ -1,0 +1,63 @@
+id: fortinet
+label: Fortinet FortiGate / FortiEDR
+version: '2026.07'
+aliases:
+- fortigate
+- fortiedr
+- fortios
+fingerprints:
+- pattern: ^srcip$
+  weight: 4
+- pattern: ^dstip$
+  weight: 4
+- pattern: ^devname$
+  weight: 4
+- pattern: ^logid$
+  weight: 3
+- pattern: ^srcintf$
+  weight: 2
+- pattern: ^dstintf$
+  weight: 2
+- pattern: ^policyid$
+  weight: 2
+- pattern: ^eventtype$
+  weight: 2
+- pattern: ^remip$
+  weight: 3
+rules:
+- pattern: ^(srcip|dstip|remip|locip|tunnelip|assignip|natsrcip|natdstip|clientip|serverip)$
+  action: mask
+  kind: ip
+- pattern: ^(srcmac|dstmac|mac)$
+  action: mask
+  kind: mac
+- pattern: ^(user|unauthuser|xauthuser|srcuser|dstuser|username|account)$
+  action: mask
+  kind: user
+- pattern: ^(srcname|dstname|devname|hostname|endpointname|unauthusersource)$
+  action: mask
+  kind: endpoint
+- pattern: ^(sender|recipient|from|to|email)$
+  action: mask
+  kind: email
+- pattern: ^(url|uri)$
+  action: text
+  kind: ioc
+- pattern: ^(msg|message|logdesc|rawdata|filename|filepath|commandline|processpath|registrypath)$
+  action: text
+- pattern: ^(devid|deviceid|endpointid|serialno|tenantid)$
+  action: mask
+  kind: opaque
+- pattern: ^(policyname|sessionid|vd|vdom|srcintf|dstintf)$
+  action: mask
+  kind: opaque
+- pattern: ^(date|time|eventtime|timestamp|tz|type|subtype|eventtype|level|severity|action|status|service|proto|protocol|srcport|dstport|policyid|policytype|logid|srcintfrole|dstintfrole)$
+  action: keep
+- pattern: ^(sha1|sha256|md5|filehash|threatid|attackid|ruleid)$
+  action: keep
+header_hints:
+- fortinet
+- fortigate
+- fortiedr
+- fortios
+notes: FortiOS key-value logs and FortiEDR event/export aliases.

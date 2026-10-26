@@ -1,0 +1,1305 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>logmask — pseudonimizzazione log</title>
+<style>
+  :root{
+    --ink:#0c1220; --panel:#131c2c; --panel2:#0f1726; --line:#26364e;
+    --paper:#d9e4f1; --dim:#8298b3; --faint:#5a7089;
+    --masked:#7cc08f; --elided:#e3a64f; --exposed:#e26a55;
+    --steel:#6fa8dc; --mono:ui-monospace,'Cascadia Code','JetBrains Mono',Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0}
+  html,body{height:100%}
+  body{background:var(--ink);color:var(--paper);
+    font:14px/1.5 system-ui,-apple-system,'Segoe UI',sans-serif;
+    display:flex;flex-direction:column}
+  ::selection{background:#2a4a6e}
+
+  header{display:flex;align-items:baseline;gap:14px;padding:14px 22px;
+    border-bottom:1px solid var(--line)}
+  .mark{font-weight:800;font-size:17px;letter-spacing:.22em;text-transform:uppercase}
+  .mark b{color:var(--elided);font-weight:800}
+  .tag{color:var(--faint);font-size:12px}
+  #vaultchip{margin-left:auto;font:11px var(--mono);color:var(--dim);
+    border:1px solid var(--line);border-radius:3px;padding:3px 9px;white-space:nowrap}
+
+  nav{display:flex;gap:2px;padding:0 22px;border-bottom:1px solid var(--line)}
+  nav button{background:none;border:0;border-bottom:2px solid transparent;
+    color:var(--dim);font:600 12px system-ui;letter-spacing:.14em;
+    text-transform:uppercase;padding:11px 16px;cursor:pointer}
+  nav button:hover{color:var(--paper)}
+  nav button.on{color:var(--paper);border-bottom-color:var(--elided)}
+  nav button:focus-visible,button:focus-visible,select:focus-visible,
+  textarea:focus-visible,input:focus-visible{outline:2px solid var(--steel);outline-offset:1px}
+
+  main{flex:1;padding:18px 22px 40px;max-width:1500px;width:100%;margin:0 auto}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:980px){.grid{grid-template-columns:1fr}}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:6px;
+    display:flex;flex-direction:column;min-height:380px}
+  .card h2{font:600 11px system-ui;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--dim);padding:10px 14px;border-bottom:1px solid var(--line);
+    display:flex;align-items:center;gap:10px}
+  .card h2 .spacer{flex:1}
+  textarea{flex:1;background:var(--panel2);color:var(--paper);border:0;
+    border-radius:0 0 6px 6px;padding:12px 14px;resize:vertical;min-height:300px;
+    font:12.5px/1.55 var(--mono);white-space:pre}
+  textarea::placeholder{color:var(--faint)}
+  textarea[readonly]{color:#c4d6ea}
+
+  .opts{display:flex;flex-wrap:wrap;gap:14px;align-items:center;
+    padding:9px 14px;border-bottom:1px solid var(--line);font-size:12.5px;color:var(--dim)}
+  .opts label{display:flex;gap:6px;align-items:center;cursor:pointer}
+  .opts input[type=checkbox]{accent-color:var(--elided)}
+  .dlp-panel{border-bottom:1px solid var(--line);background:#101929}
+  .dlp-panel summary{cursor:pointer;padding:9px 14px;color:var(--dim);font:600 11px system-ui;
+    letter-spacing:.12em;text-transform:uppercase;user-select:none}
+  .dlp-panel summary:hover{color:var(--paper)}
+  .dlp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:8px 12px;padding:0 14px 12px}
+  .dlp-item{display:grid;grid-template-columns:1fr auto;gap:4px 8px;align-items:center;border:1px solid var(--line);border-radius:4px;padding:8px}
+  .dlp-item b{font-size:12px}.dlp-item small{grid-column:1/-1;color:var(--faint);line-height:1.35}
+  .dlp-item select{min-width:132px}
+  select,input[type=text]{background:var(--panel2);color:var(--paper);border:1px solid var(--line);
+    border-radius:3px;padding:5px 8px;font:12px var(--mono)}
+  .tenantbar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:14px;
+    background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:10px 14px}
+  .tenantbar label{display:flex;align-items:center;gap:8px;font:600 11px system-ui;
+    letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+  .tenantbar input{min-width:260px}
+  .tenantnote{font:11px var(--mono);color:var(--faint)}
+  .workflowbar{display:grid;grid-template-columns:minmax(250px,360px) 1fr;gap:12px;align-items:start;margin:-4px 0 14px}
+  @media(max-width:900px){.workflowbar{grid-template-columns:1fr}}
+  .workflowbar .profilebox{background:#101929;border:1px solid var(--line);border-radius:5px;padding:10px 12px}
+  .workflowbar label{display:grid;gap:5px;font:600 11px system-ui;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
+  .workflowdesc{color:var(--faint);font-size:12px;margin-top:7px}
+  .workflow-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .workflow-panel{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px}
+  @media(max-width:980px){.workflow-panel{grid-template-columns:1fr}}
+  .workflow-card{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:12px}
+  .workflow-card h3{font:600 11px system-ui;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);margin-bottom:8px}
+  .diffbox{max-height:320px;overflow:auto;border:1px solid var(--line);background:#0c1422;border-radius:4px;font:11px var(--mono)}
+  .diffline{display:grid;grid-template-columns:46px 1fr 1fr;border-bottom:1px solid #1b2740}
+  .diffline span{padding:3px 6px;white-space:pre-wrap;overflow-wrap:anywhere}
+  .diffline .ln{color:var(--faint);text-align:right;border-right:1px solid #1b2740}
+  .diffline.changed{background:#251d10}.diffline.equal{opacity:.72}
+  .templatebox{min-height:210px;width:100%;font:12px var(--mono)}
+  .history-list{display:grid;gap:6px}.history-item{border:1px solid #1b2740;border-radius:4px;padding:7px 8px;color:var(--dim);font:11px var(--mono)}
+  .approval-list{display:flex;flex-wrap:wrap;gap:7px}.approval-list label{border:1px solid var(--line);border-radius:3px;padding:3px 7px;color:var(--dim);font:11px var(--mono)}
+  .sess-tabs{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 10px}
+  .sess-tab{border:1px solid var(--line);border-radius:4px;padding:5px 10px;background:#0e1626;color:var(--dim);font:12px var(--mono);cursor:pointer}
+  .sess-tab.on{border-color:var(--accent);color:var(--fg);background:#12203a}
+  .sess-tab .dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;background:#40506e;vertical-align:middle}
+  .sess-tab .dot.ok{background:#2ea043}.sess-tab .dot.bad{background:#d1493f}.sess-tab .dot.run{background:#c9a227}
+  .sess-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+  .sess-toolbar #sess-name{background:#0e1626;border:1px solid var(--line);border-radius:4px;color:var(--fg);padding:6px 8px;font:12px var(--mono);min-width:180px}
+  .sess-count{color:var(--dim);font:11px var(--mono)}
+  .sess-add{border:1px solid var(--line);border-radius:5px;padding:9px;margin-bottom:10px;background:#0b1220}
+  .sess-add textarea{width:100%;min-height:90px;font:12px var(--mono);margin-bottom:7px}
+  .sess-add-row{display:flex;gap:8px}.sess-add-row input{flex:1;background:#0e1626;border:1px solid var(--line);border-radius:4px;color:var(--fg);padding:6px 8px;font:12px var(--mono)}
+  .sess-items table{width:100%;border-collapse:collapse;font:11px var(--mono)}
+  .sess-items th,.sess-items td{border-bottom:1px solid #16213a;padding:6px 8px;text-align:left}
+  .sess-items th{color:var(--dim);font-weight:600}
+  .sess-items tr.viewable{cursor:pointer}.sess-items tr.viewable:hover td{background:#101a2e}
+  .sess-items tr.on td{background:#12203a}
+  .sess-st-ok{color:#3fb950}.sess-st-bad{color:#f0796b}.sess-st-pending{color:var(--dim)}.sess-st-run{color:#d9b430}
+  .sess-rm{cursor:pointer;color:#6b7a95}.sess-rm:hover{color:#f0796b}
+  .sess-viewer{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}
+  .sess-viewer textarea{width:100%;min-height:180px;font:12px var(--mono)}
+  .sess-view-report{color:var(--dim);font:11px var(--mono);margin-top:6px;display:flex;flex-wrap:wrap;gap:8px}
+  .sess-view-report .chip{border:1px solid var(--line);border-radius:3px;padding:2px 7px}
+  .sess-view-report .chip.bad{border-color:#5a2a26;color:#f0796b}
+
+  .actions{display:flex;gap:10px;padding:12px 0}
+  .btn{border:1px solid var(--line);background:var(--panel);color:var(--paper);
+    border-radius:4px;padding:8px 18px;font:600 13px system-ui;cursor:pointer}
+  .btn:hover{border-color:var(--steel)}
+  .btn.primary{background:var(--elided);border-color:var(--elided);color:#1c1408}
+  .btn.primary:hover{filter:brightness(1.08)}
+  .btn.ghost{color:var(--dim)}
+  .btn:disabled{opacity:.45;cursor:default}
+  input[type=file]{display:none}
+  .upload-card{position:relative}
+  .upload-card.dragover{border-color:var(--elided);box-shadow:0 0 0 2px rgba(227,166,79,.18) inset}
+  .upload-card.dragover::after{content:'Rilascia il file di testo';position:absolute;inset:0;z-index:5;
+    display:grid;place-items:center;background:rgba(12,18,32,.88);color:var(--paper);
+    font:700 14px system-ui;letter-spacing:.08em;text-transform:uppercase;pointer-events:none}
+  .filename.loaded,#file-pst-name.loaded,#file-docx-name.loaded,#file-docx-restore-name.loaded{color:var(--masked);font-weight:600}
+  #file-pst-name,#file-docx-name,#file-docx-restore-name{font:11px var(--mono);color:var(--dim);margin-left:8px}
+  .err-inline{color:var(--exposed);font-weight:600}
+  .filemeta{min-height:31px;padding:7px 14px;border-bottom:1px solid var(--line);
+    color:var(--faint);font:11px var(--mono);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .filemeta.loaded{color:var(--masked)}
+  .filemeta .filename{color:var(--paper);font-weight:600;overflow-wrap:anywhere}
+  .filemeta .filesize,.filemeta .fileformat,.filemeta .encoding{border:1px solid var(--line);border-radius:3px;padding:1px 6px}
+
+
+  .batch-list{border-top:1px solid var(--line);background:#101929;display:none}
+  .batch-list.visible{display:block}
+  .batch-head{display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:8px 14px;color:var(--dim);font:600 11px system-ui;letter-spacing:.12em;text-transform:uppercase}
+  .batch-table{width:100%;border-collapse:collapse;margin:0;font:11px var(--mono)}
+  .batch-table th,.batch-table td{padding:5px 8px;border-top:1px solid #1b2740;border-bottom:0}
+  .batch-table th{color:var(--faint);font:600 9px system-ui;letter-spacing:.12em;text-transform:uppercase}
+  .batch-status-ok{color:var(--masked)}.batch-status-blocked{color:var(--exposed)}.batch-status-pending{color:var(--dim)}
+  .progress{height:7px;background:var(--panel2);border:1px solid var(--line);border-radius:3px;overflow:hidden;min-width:120px}
+  .progress span{display:block;height:100%;background:var(--elided);width:0%;transition:width .25s ease}
+  .batch-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;color:var(--faint);font:11px var(--mono)}
+
+  /* ---- verification bar: the one thing to look at after every run ---- */
+  #report{margin-top:18px;display:none}
+  .vhead{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+  .vhead .t{font:600 11px system-ui;letter-spacing:.16em;text-transform:uppercase;color:var(--dim)}
+  #detect{font:11px var(--mono);color:var(--dim)}
+  .vbar{display:flex;height:14px;border-radius:3px;overflow:hidden;
+    border:1px solid var(--line);background:var(--panel2)}
+  .vbar div{transition:width .35s ease}
+  @media(prefers-reduced-motion:reduce){.vbar div{transition:none}}
+  .seg-masked{background:var(--masked)}
+  .seg-elided{background:var(--elided)}
+  .seg-exposed{background:var(--exposed)}
+  .seg-kept{background:#31445f}
+  .legend{display:flex;flex-wrap:wrap;gap:16px;margin-top:7px;font:12px var(--mono);color:var(--dim)}
+  .legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px}
+  .legend b{color:var(--paper);font-weight:600}
+
+  .warn{margin-top:12px;border:1px solid var(--exposed);background:#2a1713;
+    color:#f0b8ad;border-radius:4px;padding:9px 13px;font-size:13px;display:none}
+  .amber{margin-top:12px;border:1px solid #6e5223;background:#241b0d;
+    color:#e8c894;border-radius:4px;padding:9px 13px;font:12px var(--mono);display:none}
+
+  table{width:100%;border-collapse:collapse;margin-top:14px;font:12px var(--mono)}
+  th{font:600 10px system-ui;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--faint);text-align:left;padding:6px 10px;border-bottom:1px solid var(--line)}
+  td{padding:5px 10px;border-bottom:1px solid #1b2740;color:#b9cbe0}
+  td.num{text-align:right}
+  .badge{font:600 10px system-ui;letter-spacing:.08em;border-radius:3px;padding:2px 7px}
+  .b-mask{background:#173324;color:var(--masked)}
+  .b-text{background:#16283c;color:var(--steel)}
+  .b-redact{background:#33240e;color:var(--elided)}
+  .b-keep{background:#1c2839;color:var(--dim)}
+  .b-drop{background:#3a1720;color:var(--exposed)}
+  .b-exposed{background:#3a1712;color:var(--exposed)}
+  .b-failed{background:#3a1712;color:#ff8b78}
+
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+  .chip{font:12px var(--mono);border:1px solid var(--line);border-radius:3px;
+    padding:3px 9px;color:var(--dim)}
+  .chip b{color:var(--paper)}
+  .chip.bad{border-color:var(--exposed);color:#f0b8ad}
+
+  #err{display:none;margin:14px 0;border:1px solid var(--exposed);
+    background:#2a1713;color:#f0b8ad;border-radius:4px;padding:10px 14px;font-size:13px}
+  .hint{color:var(--faint);font-size:12px;margin-top:6px}
+
+  .authpage{min-height:calc(100vh - 58px);display:grid;place-items:center;padding:28px}
+  .modal-overlay{position:fixed;inset:0;background:rgba(6,10,18,.72);display:none;place-items:center;z-index:50;padding:24px}
+  .modal-overlay.open{display:grid}
+  .modal{background:var(--panel);border:1px solid var(--line);border-radius:8px;max-width:520px;width:100%;padding:20px 22px;box-shadow:0 18px 48px rgba(0,0,0,.5)}
+  .modal h3{font:600 14px system-ui;color:var(--exposed);margin:0 0 10px 0}
+  .modal .risk{font:12px/1.5 system-ui;color:var(--dim);background:#2a1520;border-left:3px solid var(--exposed);border-radius:4px;padding:10px 12px;margin:0 0 12px 0}
+  .modal .risk ul{margin:6px 0 0 16px;padding:0}.modal .risk li{margin:3px 0}
+  .modal .confirm-row{margin:10px 0}.modal .confirm-row input{width:100%;padding:9px 11px;margin-top:5px}
+  .modal .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:14px}
+  .btn.danger{background:#5a1a26;border-color:#7a2636;color:#f4c9d1}
+  .btn.danger:disabled{opacity:.45;cursor:not-allowed}
+  .doc-card{line-height:1.5}
+  .doc-card h2{font:600 15px system-ui;color:var(--steel);margin:18px 0 8px;padding-bottom:5px;border-bottom:1px solid var(--line)}
+  .doc-card h2:first-child{margin-top:0}
+  .doc-card h3{font:600 12px system-ui;color:var(--dim);margin:12px 0 5px}
+  .doc-card p,.doc-card li{font-size:12.5px;color:var(--paper)}
+  .doc-card ul{margin:5px 0 5px 18px;padding:0}.doc-card li{margin:3px 0}
+  .doc-card code{font:11px var(--mono);background:var(--panel2);color:var(--masked);padding:1px 4px;border-radius:3px}
+  .doc-card table{width:100%;border-collapse:collapse;margin:8px 0;font-size:11.5px}
+  .doc-card th{text-align:left;color:var(--faint);font:600 9px system-ui;letter-spacing:.1em;text-transform:uppercase;padding:5px 8px;border-bottom:1px solid var(--line)}
+  .doc-card td{padding:4px 8px;border-bottom:1px solid var(--panel2);color:var(--paper)}
+  .doc-card .doc-note{background:#1a2436;border-left:3px solid var(--steel);border-radius:4px;padding:8px 12px;margin:8px 0;font-size:12px;color:var(--dim)}
+  .doc-card .doc-warn{border-left-color:var(--exposed);background:#2a1520}
+  .authbox{width:min(460px,100%);background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:22px}
+  .authbox h1{font-size:19px;margin-bottom:5px}.authbox p{color:var(--dim);margin-bottom:18px}
+  .formgrid{display:grid;gap:12px}.formgrid label{display:grid;gap:5px;color:var(--dim);font-size:12px}
+  .formgrid input,.formgrid select{width:100%;padding:8px 10px}
+  .topactions{margin-left:auto;display:flex;align-items:center;gap:8px}
+  #userchip{font:11px var(--mono);color:var(--dim);border:1px solid var(--line);border-radius:3px;padding:3px 9px}
+  .admin-grid{display:grid;grid-template-columns:minmax(300px,420px) 1fr;gap:16px}
+  @media(max-width:1050px){.admin-grid{grid-template-columns:1fr}}
+  .admin-card{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px}
+  .admin-card h2{font:600 11px system-ui;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);margin-bottom:12px}
+  .admin-card table{margin-top:0}.admin-card input,.admin-card select{max-width:100%}
+  .small{font-size:11px;padding:5px 9px}.danger{border-color:var(--exposed);color:#f0b8ad}
+  .status-ok{color:var(--masked)}.status-bad{color:var(--exposed)}
+  #autherr{margin-top:12px;color:#f0b8ad;display:none}
+</style>
+</head>
+<body>
+<header>
+  <div class="mark">LOG<b>MASK</b></div>
+  <div class="tag">pseudonimizzazione reversibile · vault locale · v0.10.2</div>
+  <div class="topactions" id="session-head" style="display:none">
+    <div id="vaultchip">vault: —</div>
+    <div id="userchip">—</div>
+    <button class="btn ghost small" id="lang-toggle" onclick="toggleLang()">EN</button>
+    <button class="btn ghost small" onclick="logout()">Esci</button>
+  </div>
+</header>
+
+<section id="login-page" class="authpage">
+  <div class="authbox">
+    <button class="btn ghost small" id="lang-toggle-login" onclick="toggleLang()" style="float:right">EN</button>
+    <h1>Accesso LogMask</h1>
+    <p>Le operazioni sono autorizzate per ruolo e cliente. Il reverse viene registrato nell’audit.</p>
+    <div class="formgrid">
+      <label>Utente<input id="login-user" type="text" autocomplete="username" spellcheck="false"></label>
+      <label>Password<input id="login-pass" type="password" autocomplete="current-password"></label>
+      <button class="btn primary" id="login-btn" onclick="login()">Accedi</button>
+    </div>
+    <div id="autherr"></div>
+  </div>
+</section>
+
+<section id="password-page" class="authpage" style="display:none">
+  <div class="authbox">
+    <h1>Cambio password obbligatorio</h1>
+    <p>Imposta una password personale di almeno 12 caratteri. Le altre sessioni saranno revocate.</p>
+    <div class="formgrid">
+      <label>Password attuale<input id="pwd-current" type="password" autocomplete="current-password"></label>
+      <label>Nuova password<input id="pwd-new" type="password" autocomplete="new-password"></label>
+      <label>Conferma nuova password<input id="pwd-confirm" type="password" autocomplete="new-password"></label>
+      <button class="btn primary" onclick="changePassword()">Cambia password</button>
+    </div>
+    <div id="pwderr" class="warn" style="display:none"></div>
+  </div>
+</section>
+
+<div id="app-shell" style="display:none">
+<nav>
+  <button id="tab-anon" class="on">Anonimizza</button>
+  <button id="tab-sessions">Sessioni</button>
+  <button id="tab-deanon">Ripristina</button>
+  <button id="tab-kits" style="display:none">Kit</button>
+  <button id="tab-admin" style="display:none">Amministrazione</button>
+  <button id="tab-docs">Documentazione</button>
+</nav>
+
+<main>
+  <div id="err"></div>
+  <div class="tenantbar">
+    <label>Cliente / tenant
+      <input id="tenant" type="text" list="tenant-list" maxlength="64"
+        placeholder="es. acme-srl" autocomplete="off" spellcheck="false">
+      <datalist id="tenant-list"></datalist>
+    </label>
+    <span class="tenantnote">Vault, chiavi derivate e autorizzazioni sono isolati per cliente.</span>
+  </div>
+
+  <div class="workflowbar">
+    <div class="profilebox">
+      <label>Workflow SOC
+        <select id="workflow-profile" onchange="applyWorkflowProfile(this.value)"><option value="manual">manuale / personalizzato</option></select>
+      </label>
+      <div class="workflowdesc" id="workflow-desc">Seleziona un profilo per applicare preset coerenti a formato, IP, DLP e template.</div>
+    </div>
+    <div class="workflow-actions">
+      <button class="btn ghost small" onclick="generateWorkflowTemplate()">Genera template</button>
+      <button class="btn ghost small" onclick="renderCompare()">Confronta originale/anon</button>
+      <button class="btn ghost small" onclick="copyAmbiguousFields()">Copia campi ambigui</button>
+      <span class="hint">I profili non disattivano il fail-closed: i campi non conformi restano bloccati o elisi.</span>
+    </div>
+  </div>
+
+  <section id="pane-anon">
+    <div class="grid">
+      <div class="card upload-card" id="anon-upload-card">
+        <h2>Incolla o carica il log<span class="spacer"></span>
+          <input id="file-anon" type="file" multiple accept=".txt,.log,.csv,.tsv,.json,.ndjson,.jsonl,.cef,.leef,.syslog,text/*,application/json">
+          <button class="btn ghost small" onclick="$('file-anon').click()">Carica file</button>
+          <button class="btn ghost small" onclick="clearAnon()">Pulisci</button></h2>
+        <div class="opts">
+          <label>Formato<select id="fmt"><option value="auto">auto</option><option value="text">testo</option><option value="csv">CSV/TSV</option><option value="json">JSON</option><option value="ndjson">NDJSON</option><option value="syslog">Syslog key=value</option><option value="cef">CEF</option><option value="leef">LEEF</option></select></label>
+          <label>Kit vendor<select id="catalog"><option value="">rilevamento automatico</option></select></label>
+          <label>Policy IP<select id="ip-mode" onchange="syncIpMode()"><option value="none">non anonimizzare IP</option><option value="internal">anonimizza solo IP interni</option><option value="all" selected>anonimizza tutti gli IP</option></select></label>
+          <label>Policy URL<select id="url-mode"><option value="none">non anonimizzare URL</option><option value="internal">solo host del cliente</option><option value="all" selected>maschera tutti gli URL</option></select></label>
+          <label><input type="checkbox" id="safe" checked> Safe mode — elide non classificati</label>
+          <label id="subnet-wrap"><input type="checkbox" id="subnet" checked> Preserva subnet degli IPv4 anonimizzati</label>
+          <label id="tenantnet-wrap" title="Gli IP pubblici configurati in data/tenant_networks.txt identificano il cliente: mascherati anche con policy 'solo IP interni'"><input type="checkbox" id="tenantnet" checked> Maschera reti pubbliche del tenant</label>
+        </div>
+        <details class="dlp-panel">
+          <summary>Policy DLP / PII avanzata</summary>
+          <div class="dlp-grid" id="dlp-controls"><span class="hint">Caricamento categorie…</span></div>
+        </details>
+        <div class="filemeta" id="anon-filemeta">Trascina qui uno o più file testuali oppure usa “Carica file”.</div>
+        <textarea id="in-anon" spellcheck="false" placeholder="Log grezzo: testo, CSV, JSON/NDJSON, Syslog key=value, CEF o LEEF."></textarea>
+        <div class="batch-list" id="anon-batch"></div>
+      </div>
+      <div class="card">
+        <h2>Risultato anonimizzato<span class="spacer"></span>
+          <button class="btn ghost small" onclick="renderCompare()">Diff</button>
+          <button class="btn ghost small" onclick="generateWorkflowTemplate()">Template</button>
+          <button class="btn ghost small" id="download-anon" onclick="downloadOutput('anon')" disabled>Scarica</button>
+          <button class="btn ghost small" id="copy-anon" onclick="copyOut('out-anon',this)">Copia risultato</button></h2>
+        <textarea id="out-anon" readonly spellcheck="false" placeholder="Output pronto da condividere quando la verifica passa."></textarea>
+      </div>
+    </div>
+    <div class="actions"><button class="btn primary" id="go-anon" onclick="runAnon()">Anonimizza</button><span class="hint">L’operazione viene registrata senza memorizzare il contenuto del log.</span></div>
+    <div class="card" id="docx-card">
+      <h2>Documento Word .docx<span class="spacer"></span>
+        <input id="file-docx" type="file" accept=".docx">
+        <button class="btn ghost small" onclick="$('file-docx').click()">Scegli .docx</button>
+        <span class="filename" data-dynamic="1" id="file-docx-name">nessun file selezionato</span></h2>
+      <div class="opts">
+        <label>Policy IP<select id="docx-ipmode"><option value="none">non anonimizzare IP</option><option value="internal">solo IP interni</option><option value="all" selected>tutti gli IP</option></select></label>
+        <label>Policy URL<select id="docx-urlmode"><option value="none">non anonimizzare URL</option><option value="internal">solo host del cliente</option><option value="all" selected>tutti gli URL</option></select></label>
+      </div>
+      <div class="filemeta" id="docx-meta">Restituisce un .docx anonimizzato con la stessa struttura: stili, tabelle, intestazioni e numerazione restano, cambia solo il testo. Vengono trattati anche note, commenti, caselle di testo, i metadati (autore, societa') e i nomi autore delle revisioni. Se un valore da mascherare risulta spezzato su piu' porzioni di testo, quel paragrafo viene ricomposto: si perde la formattazione interna a quel paragrafo, mai il mascheramento. Immagini e oggetti incorporati non possono essere anonimizzati.</div>
+      <div class="actions"><button class="btn primary" id="go-docx" onclick="runDocxUpload()">Anonimizza documento</button><span class="hint" id="docx-status"></span></div>
+    </div>
+    <div class="card" id="pdf-card" style="display:none">
+      <h2>Documento PDF<span class="spacer"></span>
+        <input id="file-pdf" type="file" accept=".pdf">
+        <button class="btn ghost small" onclick="$('file-pdf').click()">Scegli PDF</button>
+        <span class="filename" data-dynamic="1" id="file-pdf-name">nessun file selezionato</span></h2>
+      <div class="opts">
+        <label>Output<select id="pdf-output"><option value="pdf">PDF impaginato</option><option value="text">testo</option></select></label>
+        <label>Policy IP<select id="pdf-ipmode"><option value="none">non anonimizzare IP</option><option value="internal">solo IP interni</option><option value="all" selected>tutti gli IP</option></select></label>
+        <label>Policy URL<select id="pdf-urlmode"><option value="none">non anonimizzare URL</option><option value="internal">solo host del cliente</option><option value="all" selected>tutti gli URL</option></select></label>
+      </div>
+      <div class="filemeta" id="pdf-meta">Il testo originale viene rimosso davvero dal file, non coperto: un rettangolo disegnato sopra lascerebbe il testo estraibile con un copia-incolla. Il PDF prodotto viene riletto e verificato prima della consegna. Metadati, segnalibri, annotazioni e campi modulo vengono trattati; gli allegati incorporati vengono rimossi perche' non sono mascherabili. Le pagine senza testo (scansioni) non vengono analizzate e sono segnalate.</div>
+      <div class="actions"><button class="btn primary" id="go-pdf" onclick="runPdfUpload()">Anonimizza PDF</button><span class="hint" id="pdf-status"></span></div>
+    </div>
+    <div class="card" id="pst-card" style="display:none">
+      <h2>Archivio Outlook .pst<span class="spacer"></span>
+        <input id="file-pst" type="file" accept=".pst">
+        <button class="btn ghost small" onclick="$('file-pst').click()">Scegli .pst</button>
+        <span class="filename" data-dynamic="1" id="file-pst-name">nessun file selezionato</span></h2>
+      <div class="opts">
+        <label>Output<select id="pst-fmt"><option value="ndjson">NDJSON</option><option value="csv">CSV</option></select></label>
+        <label>Policy IP<select id="pst-ipmode"><option value="none">non anonimizzare IP</option><option value="internal">solo IP interni</option><option value="all" selected>tutti gli IP</option></select></label>
+        <label>Policy URL<select id="pst-urlmode"><option value="none">non anonimizzare URL</option><option value="internal">solo host del cliente</option><option value="all" selected>tutti gli URL</option></select></label>
+      </div>
+      <div class="filemeta" id="pst-meta">Estrae i messaggi dal PST e li anonimizza (mittente, destinatari, oggetto, corpo; e-mail costanti per dominio, IP/host/nomi cliente mascherati). Una riga per messaggio, reversibile sullo stesso tenant. I display name dei destinatari vengono scartati, non solo mascherati.</div>
+      <div class="actions"><button class="btn primary" id="go-pst" onclick="runPstUpload()">Anonimizza PST</button><span class="hint" id="pst-status"></span></div>
+    </div>
+    <div class="card" id="kitdry-card">
+      <h2>Test kit — dry-run<span class="spacer"></span>
+        <button class="btn ghost small" id="kitdry-copy" onclick="copyOut('kitdry-yaml',this)" style="display:none">Copia YAML</button></h2>
+      <div class="opts">
+        <label>Kit vendor<select id="kitdry-family"><option value="">rilevamento automatico</option></select></label>
+        <label><input type="checkbox" id="kitdry-safe" checked> Safe mode — mostra cosa verrebbe eliso</label>
+      </div>
+      <div class="filemeta">Incolla i nomi colonna o l'intestazione dell'export (separatori: virgola, tab, punto e virgola, a capo). Nessun valore viene letto, mascherato o salvato: solo classificazione dei nomi campo.</div>
+      <textarea id="kitdry-in" spellcheck="false" style="min-height:56px" placeholder="es. auth_service, auth_identity, agent_hostname, action_file_sha256"></textarea>
+      <div class="actions"><button class="btn primary" id="go-kitdry" onclick="runKitDry()">Analizza header</button><span class="hint" id="kitdry-status"></span></div>
+      <div id="kitdry-result" style="display:none">
+        <div class="amber" id="kitdry-summary" style="display:block"></div>
+        <div id="kitdry-table"></div>
+        <div class="filemeta" id="kitdry-yaml-hint" style="display:none"></div>
+        <textarea id="kitdry-yaml" readonly spellcheck="false" style="display:none;min-height:130px"></textarea>
+      </div>
+    </div>
+    <div id="report">
+      <div class="vhead"><span class="t">Verifica copertura</span><span id="detect"></span></div>
+      <div class="vbar" id="vbar"></div><div class="legend" id="vlegend"></div>
+      <div class="warn" id="warn-exposed"></div><div class="amber" id="unknown-box"></div><div class="amber" id="elided-box"></div>
+      <div class="chips" id="kind-chips"></div><div id="fields-wrap"></div>
+    </div>
+    <div class="workflow-panel" id="workflow-panel" style="display:none">
+      <div class="workflow-card">
+        <h3>Confronto originale / anonimizzato</h3>
+        <div class="diffbox" id="diffbox"><div class="hint" style="padding:10px">Esegui anonimizzazione e premi “Confronta”.</div></div>
+      </div>
+      <div class="workflow-card">
+        <h3>Template operativo</h3>
+        <textarea class="templatebox" id="workflow-template" readonly spellcheck="false"></textarea>
+        <div class="actions"><button class="btn ghost small" onclick="copyOut('workflow-template',this)">Copia template</button><button class="btn ghost small" onclick="downloadWorkflowTemplate()">Scarica template</button></div>
+      </div>
+      <div class="workflow-card">
+        <h3>Campi ambigui approvati in sessione</h3>
+        <div class="approval-list" id="approval-list"><span class="hint">Nessun campo ambiguo rilevato.</span></div>
+        <div class="actions"><button class="btn ghost small" onclick="approveAmbiguousFields()">Approva selezionati</button></div>
+      </div>
+      <div class="workflow-card">
+        <h3>Archivio temporaneo sessione</h3>
+        <div class="history-list" id="history-list"><span class="hint">Nessuna lavorazione nella sessione corrente.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="pane-deanon" style="display:none">
+    <div class="grid">
+      <div class="card upload-card" id="deanon-upload-card"><h2>Incolla o carica il risultato<span class="spacer"></span>
+        <input id="file-deanon" type="file" multiple accept=".txt,.log,.csv,.tsv,.json,.ndjson,.jsonl,.cef,.leef,.syslog,text/*,application/json">
+        <button class="btn ghost small" onclick="$('file-deanon').click()">Carica file</button>
+        <button class="btn ghost small" onclick="clearDeanon()">Pulisci</button></h2>
+        <div class="opts"><label>Formato<select id="deanon-fmt"><option value="auto">auto</option><option value="text">testo</option><option value="csv">CSV/TSV</option><option value="json">JSON</option><option value="ndjson">NDJSON</option><option value="syslog">Syslog key=value</option><option value="cef">CEF</option><option value="leef">LEEF</option></select></label></div>
+        <div class="filemeta" id="deanon-filemeta">Trascina qui uno o più file pseudonimizzati oppure usa “Carica file”.</div>
+        <textarea id="in-deanon" spellcheck="false" placeholder="Testo o struttura con pseudonimi da risolvere."></textarea>
+        <div class="batch-list" id="deanon-batch"></div></div>
+      <div class="card" id="docx-restore-card">
+      <h2>Ripristina documento .docx<span class="spacer"></span>
+        <input id="file-docx-restore" type="file" accept=".docx">
+        <button class="btn ghost small" onclick="$('file-docx-restore').click()">Scegli .docx</button>
+        <span class="filename" data-dynamic="1" id="file-docx-restore-name">nessun file selezionato</span></h2>
+      <div class="filemeta">Carica un .docx anonimizzato e riottieni un .docx con i valori originali, struttura e stili invariati. Ogni ripristino e' registrato nell'audit.</div>
+      <div class="actions"><button class="btn primary" onclick="runDocxRestore()">Ripristina documento</button><span class="hint" id="docx-restore-status"></span></div>
+    </div>
+    <div class="card" id="pdf-restore-card">
+      <h2>Ripristina PDF<span class="spacer"></span>
+        <input id="file-pdf-restore" type="file" accept=".pdf">
+        <button class="btn ghost small" onclick="$('file-pdf-restore').click()">Scegli PDF</button>
+        <span class="filename" data-dynamic="1" id="file-pdf-restore-name">nessun file selezionato</span></h2>
+      <div class="filemeta">Gli pseudonimi tornano ai valori originali. Le posizioni restano quelle del documento anonimizzato: il file e' leggibile e completo, non identico all'originale di partenza.</div>
+      <div class="actions"><button class="btn primary" onclick="runPdfRestore()">Ripristina PDF</button><span class="hint" id="pdf-restore-status"></span></div>
+    </div>
+    <div class="card"><h2>Testo ripristinato<span class="spacer"></span>
+        <button class="btn ghost small" id="download-deanon" onclick="downloadOutput('deanon')" disabled>Scarica</button>
+        <button class="btn ghost small" onclick="copyOut('out-deanon',this)">Copia risultato</button></h2><textarea id="out-deanon" readonly spellcheck="false"></textarea></div>
+    </div>
+    <div class="actions"><button class="btn primary" id="go-deanon" onclick="runDeanon()">Ripristina</button><span class="hint">Ogni operazione di reverse è registrata con utente, tenant, IP ed esito.</span></div>
+    <div class="chips" id="deanon-chips"></div>
+  </section>
+
+  <section id="pane-sessions" style="display:none">
+    <div class="card">
+      <h2>Sessioni di lavoro<span class="spacer"></span>
+        <input id="sess-files" type="file" multiple accept=".txt,.log,.csv,.tsv,.json,.ndjson,.jsonl,.cef,.leef,.syslog,text/*,application/json">
+        <button class="btn ghost small" onclick="newSession()">＋ Nuova sessione</button></h2>
+      <div class="sess-tabs" id="sess-tabs"></div>
+      <div class="hint" id="sess-empty">Crea una sessione per raccogliere più log (incolla e/o file) come voci separate, elaborarle insieme e scaricarle in un unico ZIP. Le sessioni restano in memoria: si azzerano al reload o al logout, nessun contenuto viene salvato su disco.</div>
+      <div id="sess-body" style="display:none">
+        <div class="sess-toolbar">
+          <input id="sess-name" maxlength="60" placeholder="nome sessione" onchange="renameSession(this.value)">
+          <span class="sess-count" id="sess-count"></span>
+          <span class="spacer"></span>
+          <button class="btn ghost small" onclick="$('sess-files').click()">Aggiungi file</button>
+          <button class="btn primary small" id="sess-run" onclick="processSession()">Elabora sessione</button>
+          <button class="btn ghost small" id="sess-zip" onclick="downloadSessionZip()" disabled>Scarica ZIP</button>
+          <button class="btn ghost small" onclick="closeSession()">Chiudi sessione</button>
+        </div>
+        <div class="sess-add">
+          <textarea id="sess-paste" spellcheck="false" placeholder="Incolla qui un log e premi «Aggiungi voce» per inserirlo nella sessione come voce separata."></textarea>
+          <div class="sess-add-row">
+            <input id="sess-item-name" maxlength="80" placeholder="etichetta voce (opzionale)">
+            <button class="btn ghost small" onclick="addPasteItem()">Aggiungi voce</button>
+          </div>
+        </div>
+        <div class="sess-items" id="sess-items"></div>
+        <div class="sess-viewer" id="sess-viewer" style="display:none">
+          <h3>Voce <span id="sess-view-name"></span><span class="spacer"></span>
+            <button class="btn ghost small" id="sess-view-copy" onclick="copyOut('sess-view-out',this)">Copia</button>
+            <button class="btn ghost small" id="sess-view-dl" onclick="downloadViewedItem()">Scarica voce</button></h3>
+          <textarea id="sess-view-out" readonly spellcheck="false"></textarea>
+          <div class="sess-view-report" id="sess-view-report"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="pane-kits" style="display:none">
+    <div class="grid">
+      <div class="card">
+        <h2>Kit installati<span class="spacer"></span>
+          <button class="btn ghost small" onclick="loadKitStudio()">Aggiorna</button></h2>
+        <div id="kits-list"><span class="hint">Caricamento…</span></div>
+        <div class="filemeta">I kit di serie sono in sola lettura: "Apri copia" li carica nell'editor per estenderli o sostituirli con un file utente. I kit utente vivono nella cartella dei kit (hot reload) e hanno priorità sulle regole di serie.</div>
+      </div>
+      <div class="card">
+        <h2>Editor kit utente<span class="spacer"></span>
+          <button class="btn ghost small" onclick="kitTemplate()">Template</button>
+          <button class="btn ghost small" id="kit-delete-btn" onclick="deleteKitFile()" style="display:none">Elimina file</button></h2>
+        <div class="opts"><label>Nome file<input id="kit-filename" type="text" placeholder="mio_kit.yaml" style="width:240px"></label></div>
+        <textarea id="kit-editor" spellcheck="false" style="min-height:320px;font-family:ui-monospace,Consolas,monospace;font-size:12px" placeholder="id: mio_kit&#10;rules:&#10;  - {pattern: '^user$', action: mask, kind: user}"></textarea>
+        <div class="actions">
+          <button class="btn ghost" onclick="validateKit()">Valida</button>
+          <button class="btn primary" onclick="saveKitFile()">Salva — hot reload</button>
+          <span class="hint" id="kit-status"></span></div>
+        <div class="amber" id="kit-report" style="display:none"></div>
+      </div>
+    </div>
+  </section>
+  <section id="pane-admin" style="display:none">
+    <div class="admin-grid">
+      <div class="admin-card">
+        <h2>Azzera vault tenant</h2>
+        <div class="filemeta">Il vault e' l'unica cosa che rende reversibili gli export gia' condivisi: azzerandolo non si potra' piu' risalire da uno pseudonimo al valore originale. Il file NON viene cancellato ma archiviato con un timestamp accanto all'originale, quindi l'operazione e' recuperabile a mano. I token restano gli stessi, quindi la correlazione con gli export precedenti si mantiene.</div>
+        <div class="formgrid">
+          <label>Tenant<input id="reset-tenant" type="text" placeholder="acme"></label>
+          <label>Conferma: ripeti il nome del tenant<input id="reset-confirm" type="text" placeholder="acme"></label>
+        </div>
+        <div class="actions"><button class="btn ghost" onclick="resetVault()">Azzera vault</button><span class="hint" id="reset-status"></span></div>
+      </div>
+      <div class="admin-card">
+        <h2>Reset secret (master key)</h2>
+        <div class="filemeta"><b>Operazione globale e distruttiva.</b> Rigenera la master key da cui derivano TUTTI i token: da qui in poi lo stesso valore produce uno pseudonimo diverso (secret- compresi) e OGNI vault esistente, di ogni tenant, smette di essere reversibile. Come per l'azzera vault nulla viene cancellato: la vecchia chiave e i vault vengono archiviati con un timestamp e sono recuperabili solo insieme. Utenti e sessioni non dipendono dalla master key: nessuno viene disconnesso.</div>
+        <div class="actions"><button class="btn danger" onclick="openSecretModal()">Reset secret…</button><span class="hint" id="secret-status"></span></div>
+      </div>
+      <div class="admin-card">
+        <h2>Crea utente</h2>
+        <div class="formgrid">
+          <label>Username<input id="new-user" type="text" placeholder="m.rossi"></label>
+          <label>Password temporanea<input id="new-password" type="password"></label>
+          <label>Ruolo<select id="new-role"><option>operator</option><option>analyst</option><option>reverser</option><option>admin</option></select></label>
+          <label>Tenant, separati da virgola<input id="new-tenants" type="text" placeholder="acme,globex"></label>
+          <button class="btn primary" onclick="createUser()">Crea utente</button>
+        </div>
+      </div>
+      <div class="admin-card"><h2>Utenti</h2><div id="users-wrap"></div></div>
+    </div>
+    <div class="admin-card" style="margin-top:16px"><h2>Audit recente</h2><div class="actions"><button class="btn ghost small" onclick="loadAudit()">Aggiorna</button></div><div id="audit-wrap"></div></div>
+  </section>
+
+  <section id="pane-docs" style="display:none">
+    <div class="card doc-card"><div id="docs-body"></div></div>
+  </section>
+</main>
+</div>
+
+<div id="secret-modal" class="modal-overlay" role="dialog" aria-modal="true">
+  <div class="modal">
+    <h3 id="secret-modal-title">Reset secret — master key</h3>
+    <div class="risk" id="secret-modal-risk"></div>
+    <div class="confirm-row"><label id="secret-modal-label"></label>
+      <input id="secret-modal-input" type="text" autocomplete="off" spellcheck="false" oninput="onSecretConfirmInput()"></div>
+    <div class="modal-actions">
+      <button class="btn ghost" onclick="closeSecretModal()" id="secret-modal-cancel">Annulla</button>
+      <button class="btn danger" id="secret-modal-go" disabled onclick="confirmSecretReset()">Reset secret</button>
+    </div>
+    <span class="hint" id="secret-modal-status"></span>
+  </div>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+// ------------------------- i18n (v0.16.0) -------------------------
+let LANG=localStorage.getItem('logmask-lang')||'it';
+const I18N={"Accedi": "Sign in", "Accesso LogMask": "LogMask sign-in", "Aggiorna": "Refresh", "Aggiungi file": "Add files", "Aggiungi voce": "Add entry", "Amministrazione": "Administration", "Documentazione": "Documentation", "Analizza header": "Analyze header", "Anonimizza": "Anonymize", "Anonimizza PST": "Anonymize PST", "Approva selezionati": "Approve selected", "Archivio Outlook .pst": "Outlook .pst archive", "Archivio temporaneo sessione": "Temporary session archive", "Audit recente": "Recent audit", "Cambia password": "Change password", "Cambio password obbligatorio": "Password change required", "Campi ambigui approvati in sessione": "Ambiguous fields approved this session", "Carica file": "Upload file", "Caricamento categorie…": "Loading categories…", "Caricamento…": "Loading…", "Chiudi sessione": "Close session", "Cliente / tenant": "Client / tenant", "Conferma nuova password": "Confirm new password", "Confronta originale/anon": "Compare original/anon", "Confronto originale / anonimizzato": "Original / anonymized comparison", "Copia": "Copy", "Copia YAML": "Copy YAML", "Copia campi ambigui": "Copy ambiguous fields", "Copia risultato": "Copy result", "Copia template": "Copy template", "Crea una sessione per raccogliere più log (incolla e/o file) come voci separate, elaborarle insieme e scaricarle in un unico ZIP. Le sessioni restano in memoria: si azzerano al reload o al logout, nessun contenuto viene salvato su disco.": "Create a session to collect multiple logs (paste and/or files) as separate entries, process them together and download them as a single ZIP. Sessions live in memory: they reset on reload or logout, no content is written to disk.", "Crea utente": "Create user", "Editor kit utente": "User kit editor", "Elabora sessione": "Process session", "Elimina file": "Delete file", "Esci": "Log out", "Esegui anonimizzazione e premi “Confronta”.": "Run an anonymization and press “Compare”.", "Estrae i messaggi dal PST e li anonimizza (mittente, destinatari, oggetto, corpo; e-mail costanti per dominio, IP/host/nomi cliente mascherati). Una riga per messaggio, reversibile sullo stesso tenant. I display name dei destinatari vengono scartati, non solo mascherati.": "Extracts messages from the PST and anonymizes them (sender, recipients, subject, body; per-domain constant e-mails; IPs/hosts/client names masked). One line per message, reversible on the same tenant. Recipient display names are discarded, not just masked.", "Formato": "Format", "Genera template": "Generate template", "Gli IP pubblici configurati in data/tenant_networks.txt identificano il cliente: mascherati anche con policy 'solo IP interni'": "Public IPs configured in data/tenant_networks.txt identify the client: masked even with the 'internal IPs only' policy", "I profili non disattivano il fail-closed: i campi non conformi restano bloccati o elisi.": "Profiles never disable fail-closed: non-compliant fields stay blocked or elided.", "Imposta una password personale di almeno 12 caratteri. Le altre sessioni saranno revocate.": "Set a personal password of at least 12 characters. Other sessions will be revoked.", "Incolla i nomi colonna o l'intestazione dell'export (separatori: virgola, tab, punto e virgola, a capo). Nessun valore viene letto, mascherato o salvato: solo classificazione dei nomi campo.": "Paste the column names or the export header (separators: comma, tab, semicolon, newline). No value is read, masked or stored: only field-name classification.", "Incolla o carica il log": "Paste or upload the log", "Incolla o carica il risultato": "Paste or upload the result", "Incolla qui un log e premi «Aggiungi voce» per inserirlo nella sessione come voce separata.": "Paste a log here and press “Add entry” to add it to the session as a separate entry.", "Kit": "Kits", "Kit installati": "Installed kits", "Kit vendor": "Vendor kit", "Le operazioni sono autorizzate per ruolo e cliente. Il reverse viene registrato nell’audit.": "Operations are authorized by role and client. Reversals are recorded in the audit log.", "Log grezzo: testo, CSV, JSON/NDJSON, Syslog key=value, CEF o LEEF.": "Raw log: text, CSV, JSON/NDJSON, Syslog key=value, CEF or LEEF.", "L’operazione viene registrata senza memorizzare il contenuto del log.": "The operation is logged without storing the log content.", "Maschera reti pubbliche del tenant": "Mask tenant public networks", "Nessun campo ambiguo rilevato.": "No ambiguous fields detected.", "Nessuna lavorazione nella sessione corrente.": "No work in the current session.", "Nome file": "File name", "Nuova password": "New password", "Ogni operazione di reverse è registrata con utente, tenant, IP ed esito.": "Every reverse operation is recorded with user, tenant, IP and outcome.", "Output pronto da condividere quando la verifica passa.": "Output ready to share once verification passes.", "Password attuale": "Current password", "Password temporanea": "Temporary password", "Policy DLP / PII avanzata": "Advanced DLP / PII policy", "Policy IP": "IP policy", "Preserva subnet degli IPv4 anonimizzati": "Preserve subnets of anonymized IPv4s", "Pulisci": "Clear", "Ripristina": "Restore", "Risultato anonimizzato": "Anonymized result", "Ruolo": "Role", "Safe mode — elide non classificati": "Safe mode — elide unclassified fields", "Safe mode — mostra cosa verrebbe eliso": "Safe mode — show what would be elided", "Salva — hot reload": "Save — hot reload", "Scarica": "Download", "Scarica ZIP": "Download ZIP", "Scarica template": "Download template", "Scarica voce": "Download entry", "Scegli .pst": "Choose .pst", "Seleziona un profilo per applicare preset coerenti a formato, IP, DLP e template.": "Pick a profile to apply consistent presets for format, IP, DLP and template.", "Sessioni": "Sessions", "Sessioni di lavoro": "Work sessions", "Template operativo": "Operational template", "Tenant, separati da virgola": "Tenants, comma-separated", "Testo o struttura con pseudonimi da risolvere.": "Text or structured data with pseudonyms to resolve.", "Testo ripristinato": "Restored text", "Trascina qui uno o più file pseudonimizzati oppure usa “Carica file”.": "Drag one or more pseudonymized files here or use “Upload file”.", "Trascina qui uno o più file testuali oppure usa “Carica file”.": "Drag one or more text files here or use “Upload file”.", "Utente": "User", "Utenti": "Users", "Valida": "Validate", "Vault, chiavi derivate e autorizzazioni sono isolati per cliente.": "Vault, derived keys and permissions are isolated per client.", "Verifica copertura": "Coverage check", "Voce": "Entry", "Workflow SOC": "SOC workflows", "anonimizza solo IP interni": "anonymize internal IPs only", "anonimizza tutti gli IP": "anonymize all IPs", "es. auth_service, auth_identity, agent_hostname, action_file_sha256": "e.g. auth_service, auth_identity, agent_hostname, action_file_sha256", "es. acme-srl": "e.g. acme-corp", "etichetta voce (opzionale)": "entry label (optional)", "logmask — pseudonimizzazione log": "logmask — log pseudonymization", "manuale / personalizzato": "manual / custom", "nome sessione": "session name", "non anonimizzare IP": "do not anonymize IPs", "rilevamento automatico": "auto-detect", "solo IP interni": "internal IPs only", "testo": "text", "tutti gli IP": "all IPs", "I kit di serie sono in sola lettura: \"Apri copia\" li carica nell'editor per estenderli o sostituirli con un file utente. I kit utente vivono nella cartella dei kit (hot reload) e hanno priorità sulle regole di serie.": "Built-in kits are read-only: \"Open copy\" loads them into the editor to extend or replace them with a user file. User kits live in the kits folder (hot reload) and take priority over built-in rules.", "Test kit — dry-run": "Kit test — dry-run", "mascherati": "masked", "elisi": "elided", "non conformi": "non-compliant", "verifica": "verification", "BLOCCATA": "BLOCKED", "righe": "rows", "testo libero": "free text", "forzato": "forced", "generico": "generic", "nessun IP anonimizzato": "no IPs anonymized", "solo IP interni anonimizzati": "internal IPs anonymized only", "tutti gli IP anonimizzati": "all IPs anonymized", "OUTPUT BLOCCATO": "OUTPUT BLOCKED", " valori in chiaro, ": " clear-text values, ", " controlli falliti.": " failed checks.", " Campione: ": " Sample: ", " campi fuori kit": " fields outside the kit", " — copertura vendor ": " — vendor coverage ", " · classificazione complessiva ": " · overall classification ", "Copertura kit completa sui campi popolati": "Full kit coverage on populated fields", " · classificazione ": " · classification ", "Proponi regole YAML": "Propose YAML rules", " valori elisi": " values elided", "IP mantenuti per policy": "IPs kept by policy", "file OK": "files OK", "bloccati/errori": "blocked/errors", " file bloccati o in errore: esclusi dallo ZIP. Digitare output per dettagli.": " files blocked or failed: excluded from the ZIP. Type output for details.", "batch anonimizzazione": "anonymization batch", "risolti": "resolved", "non risolti": "unresolved", "Anonimizzazione fallita: ": "Anonymization failed: ", "Ripristino fallito: ": "Restore failed: ", "sessione scaduta": "session expired", "risposta non valida dal backend": "invalid response from backend", "tenant non valido": "invalid tenant", "Copiato": "Copied", "il file è vuoto": "the file is empty", "File non valido": "Invalid file", "File troppo grande ": "File too large ", ". Limite ": ". Limit ", "Il file sembra binario o contiene troppi caratteri di controllo": "The file looks binary or contains too many control characters", "Il file è binario o usa un formato archivio/documento non supportato": "The file is binary or uses an unsupported archive/document format", "Richiesta troppo grande per il server. Limite ": "Request too large for the server. Limit ", "Nessun testo da aggiungere alla sessione.": "No text to add to the session.", "Crea prima una sessione.": "Create a session first.", "Sessione vuota.": "Session is empty.", "Sessione ": "Session ", "Seleziona un file .pst": "Select a .pst file", " messaggi anonimizzati - file scaricato.": " messages anonymized - file downloaded.", "Non applicabile quando gli IP vengono mantenuti": "Not applicable when IPs are kept", "Serve un input e un output anonimizzato per il confronto.": "Comparison needs an input and an anonymized output.", "nessuna colonna riconosciuta": "no columns recognized", "analisi…": "analyzing…", "copia del kit di serie — salvala come file utente (extend/replace)": "copy of a built-in kit — save it as a user file (extend/replace)", "salvato — registro ricaricato (": "saved — registry reloaded (", " kit attivi)": " active kits)", "eliminato — registro ricaricato": "deleted — registry reloaded", "Eliminare ": "Delete ", "? Le regole del file smettono subito di essere applicate.": "? The file's rules stop being applied immediately.", "colonna": "column", "azione": "action", "origine": "source", "kit ": "kit ", "config": "config", "safe (eliso)": "safe (elided)", "euristica": "heuristic", " · confidenza ": " · confidence ", " campi analizzati": " fields analyzed", "fuori kit": "outside the kit", " (elisi in Safe mode)": " (elided in Safe mode)", "nessun kit rilevato": "no kit detected", " (classificazione generica)": " (generic classification)", "file": "file", "regole": "rules", "stato": "status", "di serie": "built-in", "utente": "user", "avvisi ": "warnings ", "errori": "errors", "Modifica": "Edit", "Apri copia": "Open copy", "Nessun kit utente: creane uno con Template o \"Apri copia\" da un kit di serie. Cartella: ": "No user kits: create one with Template or \"Open copy\" from a built-in kit. Folder: ", "Errori (bloccano il salvataggio)": "Errors (block saving)", "Avvisi (regole scartate dal loader)": "Warnings (rules the loader drops)", "Valido": "Valid", " regole, ": " rules, ", " fingerprint": " fingerprints", "Regole proposte per i campi fuori kit — default fail-closed (mask/opaque): rivedi i TODO prima di salvare.": "Rules proposed for the out-of-kit fields — fail-closed default (mask/opaque): review the TODOs before saving.", "Elisi: ": "Elided: ", "Campi fuori catalogo: ": "Fields outside the catalog: ", "Stato verifica: ": "Verification status: ", "Sessione multi-file · ": "Multi-file session · ", " file": " files", "tenant ": "tenant ", " record": " records"};
+Object.assign(I18N,{"Estrazione e anonimizzazione in corso...": "Extracting and anonymizing…"});
+Object.assign(I18N,{"nessun file selezionato": "no file selected"});
+Object.assign(I18N,{"impossibile leggere il file: \u00e8 ancora aperto in un\u2019altra applicazione (Outlook / Word). Chiudila oppure lavora su una copia del file.": "cannot read the file: it is still open in another application (Outlook / Word). Close it, or work on a copy of the file."});
+Object.assign(I18N,{"Reset secret — master key": "Reset secret — master key", "Reset secret…": "Reset secret…", "Annulla": "Cancel", "Operazione globale e irreversibile per gli export gia condivisi.": "Global operation, irreversible for already-shared exports.", "Ogni token futuro cambia: lo stesso valore produce uno pseudonimo diverso (secret- compresi).": "Every future token changes: the same value yields a different pseudonym (including secret-).", "OGNI vault esistente, di ogni tenant, smette di essere reversibile.": "EVERY existing vault, of every tenant, stops being reversible.", "Vecchia chiave e vault vengono ARCHIVIATI con timestamp, non cancellati: recuperabili solo insieme.": "The old key and vaults are ARCHIVED with a timestamp, not deleted: recoverable only together.", "Utenti e sessioni non dipendono dalla master key: nessuno viene disconnesso.": "Users and sessions do not depend on the master key: nobody is logged out.", "Per confermare digita ": "To confirm, type ", "rigenerazione in corso…": "regenerating…"});
+Object.assign(I18N,{"Reset secret (master key)": "Reset secret (master key)", "Reset secret": "Reset secret", "digita esattamente RESET SECRET per confermare": "type exactly RESET SECRET to confirm", "Rigenerare la master key? Tutti i token cambieranno e nessun vault esistente sara piu reversibile. Vecchia chiave e vault vengono archiviati, non cancellati.": "Regenerate the master key? All tokens will change and no existing vault will be reversible any more. The old key and vaults are archived, not deleted.", "secret rigenerato — ": "secret regenerated — ", " vault archiviati. I nuovi token sono diversi.": " vaults archived. New tokens are different."});
+Object.assign(I18N,{"campo": "field", "azione": "action", "auto (Safe: elide)": "auto (Safe: elide)", "mantieni": "keep", "pseudonimizza": "pseudonymize", "elidi": "elide", "Salva config campi mancanti": "Save missing-field config", "salvataggio…": "saving…", "salvato — riesegui per applicare (": "saved — re-run to apply (", " campi configurati)": " fields configured)", "Salvataggio fallito: ": "Save failed: "});
+Object.assign(I18N,{"Documento PDF": "PDF document", "Scegli PDF": "Choose PDF", "PDF impaginato": "laid-out PDF", "testo": "text", "Anonimizza PDF": "Anonymize PDF", "Ripristina PDF": "Restore PDF", "Seleziona un file PDF": "Select a PDF file", "Anonimizzazione PDF fallita: ": "PDF anonymization failed: ", "Ripristino PDF fallito: ": "PDF restore failed: ", "pagine": "pages", "valori mascherati": "values masked", "metadati": "metadata", "allegati rimossi": "attachments removed", "supporto PDF non disponibile in questo container": "PDF support not available in this container"});
+Object.assign(I18N,{"Policy URL": "URL policy", "non anonimizzare URL": "do not anonymize URLs", "solo host del cliente": "customer hosts only", "maschera tutti gli URL": "mask all URLs", "tutti gli URL": "all URLs"});
+Object.assign(I18N,{"estrazione PST non disponibile in questo container": "PST extraction not available in this container", "Estrazione PST non disponibile": "PST extraction not available", "manca pst-utils nell’immagine. Ricostruisci il container con docker compose up -d --build; se il problema resta, verifica che il Dockerfile installi pst-utils.": "pst-utils is missing from the image. Rebuild with docker compose up -d --build; if it persists, check that the Dockerfile installs pst-utils.", "e’ un archivio Outlook: usa la card \"Archivio Outlook .pst\" piu’ in basso, non questo riquadro.": "is an Outlook archive: use the \"Outlook .pst archive\" card below, not this box.", "e’ un documento Word: usa la card \"Documento Word .docx\" piu’ in basso, non questo riquadro.": "is a Word document: use the \"Word .docx document\" card below, not this box."});
+Object.assign(I18N,{"paragrafi": "paragraphs", "pseudonimi risolti": "pseudonyms resolved", "NON risolti": "NOT resolved", "pseudonimi non risolti: appartengono a un altro tenant o il vault e’ stato azzerato.": "pseudonyms not resolved: they belong to another tenant or the vault was reset."});
+Object.assign(I18N,{"Ripristina documento .docx": "Restore .docx document", "Ripristina documento": "Restore document", "paragrafi ripristinati": "paragraphs restored", "Ripristino documento fallito: ": "Document restore failed: "});
+Object.assign(I18N,{"Documento Word .docx": "Word .docx document", "Scegli .docx": "Choose .docx", "Anonimizza documento": "Anonymize document", "Seleziona un file .docx": "Select a .docx file", "elaborazione…": "processing…", "paragrafi modificati": "paragraphs changed", "metadati": "metadata", "con formattazione interna ricomposta": "with inner formatting rebuilt", "Anonimizzazione documento fallita: ": "Document anonymization failed: "});
+Object.assign(I18N,{"Azzera vault tenant": "Reset tenant vault", "Azzera vault": "Reset vault", "Conferma: ripeti il nome del tenant": "Confirm: repeat the tenant name", "indicare il tenant": "specify the tenant", "la conferma non corrisponde": "confirmation does not match", "Azzerare il vault di ": "Reset the vault of ", "? Gli export gia condivisi non saranno piu reversibili. Il file viene archiviato, non cancellato.": "? Exports already shared will no longer be reversible. The file is archived, not deleted.", "archiviato come ": "archived as ", "nessun vault da azzerare": "no vault to reset", "Il vault e' l'unica cosa che rende reversibili gli export gia' condivisi: azzerandolo non si potra' piu' risalire da uno pseudonimo al valore originale. Il file NON viene cancellato ma archiviato con un timestamp accanto all'originale, quindi l'operazione e' recuperabile a mano. I token restano gli stessi, quindi la correlazione con gli export precedenti si mantiene.": "The vault is the only thing that keeps already-shared exports reversible: resetting it means you can no longer trace a pseudonym back to its original value. The file is NOT deleted but archived with a timestamp next to the original, so it can be undone by hand. Tokens stay the same, so correlation with previous exports is preserved."});
+Object.assign(I18N,{"valori":"values","completati":"completed","errore":"error","bloccato":"blocked","in coda":"queued","pronto":"ready","formato":"format","dimensione":"size"," file caricati in sessione":" files loaded in the session","Caricamento file: ":"File upload: ","ERRORE: ":"ERROR: ","BLOCCATO":"BLOCKED","Anonimizzazione PST fallita: ":"PST anonymization failed: ","incolla-":"paste-","Sessione multi-file caricata: ":"Multi-file session loaded: "," file.\nIl contenuto completo resta in memoria browser e viene elaborato file per file.\nAnteprima primo file (":" files.\nThe full content stays in browser memory and is processed file by file.\nPreview of the first file (","Sessione multi-file ":"Multi-file session ","anonimizzazione":"anonymization","\n\nI risultati OK sono scaricabili come ZIP dal pulsante Scarica.":"\n\nOK results can be downloaded as a ZIP via the Download button."});
+const t=s=>LANG==='en'?(I18N[s]??s):s;
+function translateDom(){
+  const w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);let n;
+  while(n=w.nextNode()){
+    const raw=n.nodeValue;if(!raw||!raw.trim())continue;
+    // v0.22.4: le etichette aggiornate a runtime (nome del file scelto) non
+    // vanno ritradotte: il traduttore le riporterebbe al testo originale.
+    if(n.parentElement&&n.parentElement.dataset&&n.parentElement.dataset.dynamic)continue;
+    if(n.__it===undefined)n.__it=raw;
+    const base=n.__it,key=base.trim();
+    const rep=LANG==='en'?(I18N[key]??key):key;
+    n.nodeValue=base.replace(key,rep);
+  }
+  for(const el of document.querySelectorAll('[placeholder],[title]')){
+    for(const a of ['placeholder','title']){
+      const v=el.getAttribute(a);if(!v)continue;
+      const orig=el.dataset['it'+a]??v;el.dataset['it'+a]=orig;
+      el.setAttribute(a,LANG==='en'?(I18N[orig]??orig):orig);
+    }
+  }
+  document.title=t('logmask — pseudonimizzazione log');
+  for(const id of ['lang-toggle','lang-toggle-login']){const b=$(id);if(b)b.textContent=LANG==='en'?'IT':'EN';}
+}
+function toggleLang(){LANG=LANG==='en'?'it':'en';localStorage.setItem('logmask-lang',LANG);translateDom();if($('pane-docs')&&$('pane-docs').style.display!=='none')renderDocs();}
+
+const esc = s => String(s ?? '').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let ME=null;
+const FILE_STATE={anon:null,deanon:null};
+const FILE_BATCH={anon:[],deanon:[]}; // legacy test marker: source:'batch:'+f.format logmask-anonymized-batch.zip
+const BATCH_RESULTS={anon:[],deanon:[]};
+let BATCH_RUNNING=false;
+let WORKFLOW_PROFILES=[];
+let LAST_ANON_RESPONSE=null;
+let LAST_ANON_ORIGINAL='';
+let SESSION_HISTORY=[];
+let LAST_UNKNOWN_FIELDS=[];
+let LAST_KITDRY={cols:[],kit:''};
+let APPROVED_AMBIGUOUS=new Set();
+let FIELD_OVERRIDES={};
+const DEFAULT_MAX_FILE_BYTES=8*1024*1024;
+function cookie(name){return document.cookie.split('; ').find(v=>v.startsWith(name+'='))?.split('=').slice(1).join('=')||'';}
+function showErr(msg,inlineId){
+  const e=$('err');e.textContent=msg;e.style.display='block';
+  // v0.22.5: il riquadro errori sta in cima alla pagina. Chi lavora su una
+  // card in fondo (PST, DOCX) non lo vede e legge la situazione come "non
+  // succede niente". L'errore viene quindi mostrato anche accanto al pulsante
+  // che si e' premuto, e la pagina scorre sul messaggio.
+  if(inlineId){const el=$(inlineId);if(el){el.textContent=msg;el.classList.add('err-inline');}}
+  else{try{e.scrollIntoView({behavior:'smooth',block:'center'});}catch(_){}}
+}
+function hideErr(){$('err').style.display='none';}
+function authErr(msg){$('autherr').textContent=msg;$('autherr').style.display='block';}
+async function request(path,{method='GET',body=null,csrf=true}={}){
+  const headers={};let payload=null;if(body!==null){headers['Content-Type']='application/json';payload=JSON.stringify(body);const max=ME?.max_body_bytes;if(max&&new TextEncoder().encode(payload).length>max)throw new Error(t('Richiesta troppo grande per il server. Limite ')+humanBytes(max)+'.');}
+  if(csrf && method!=='GET') headers['X-CSRF-Token']=decodeURIComponent(cookie('logmask_csrf'));
+  const r=await fetch(path,{method,headers,body:payload});
+  const j=await r.json().catch(()=>({error:t('risposta non valida dal backend')}));
+  if(r.status===401){showLogin();throw new Error(t('sessione scaduta'));}
+  if(!r.ok) throw new Error(j.error||j.detail||('errore '+r.status)); return j;
+}
+function showLogin(){$('login-page').style.display='grid';$('password-page').style.display='none';$('app-shell').style.display='none';$('session-head').style.display='none';ME=null;}
+function showPassword(){$('login-page').style.display='none';$('password-page').style.display='grid';$('app-shell').style.display='none';$('session-head').style.display='flex';}
+async function showApp(){
+  $('login-page').style.display='none';$('password-page').style.display='none';$('app-shell').style.display='block';$('session-head').style.display='flex';
+  $('userchip').textContent=ME.username+' · '+ME.role;
+  const reverse=ME.permissions.includes('reverse'), admin=ME.permissions.includes('admin');
+  $('tab-deanon').style.display=reverse?'':'none';$('tab-admin').style.display=admin?'':'none';$('tab-kits').style.display=admin?'':'none';
+  // v0.22.3: la card PST resta VISIBILE anche senza readpst: nasconderla
+  // lasciava l'utente senza spiegazione ("carico il file e non succede nulla").
+  $('pst-card').style.display='';
+  $('pdf-card').style.display='';
+  if(ME.pdf_available===false){$('go-pdf').disabled=true;$('pdf-status').textContent=t('supporto PDF non disponibile in questo container');}
+  if(!ME.pst_available){
+    $('go-pst').disabled=true;
+    $('pst-status').textContent=t('estrazione PST non disponibile in questo container');
+    $('pst-meta').innerHTML='<b>'+t('Estrazione PST non disponibile')+'</b> \u2014 '
+      +t('manca pst-utils nell\u2019immagine. Ricostruisci il container con docker compose up -d --build; se il problema resta, verifica che il Dockerfile installi pst-utils.');
+  }
+  await loadTenants(); await loadVendorKits(); await loadWorkflowProfiles(); await loadDlpCategories(); await loadFieldOverrides(); const savedProfile=localStorage.getItem('logmask-workflow-profile'); if(savedProfile)$('workflow-profile').value=savedProfile; applyWorkflowProfile($('workflow-profile').value); await refreshVault(); if(admin){await loadUsers();await loadAudit();}
+}
+async function login(){
+  $('autherr').style.display='none';const b=$('login-btn');b.disabled=true;
+  try{ME=await request('/api/login',{method:'POST',csrf:false,body:{username:$('login-user').value,password:$('login-pass').value}});$('login-pass').value='';if(ME.must_change_password)showPassword();else await showApp();}
+  catch(e){authErr(e.message);}finally{b.disabled=false;}
+}
+async function logout(){try{await request('/api/logout',{method:'POST',body:{}});}catch(_){}showLogin();}
+async function changePassword(){
+  const a=$('pwd-new').value,b=$('pwd-confirm').value,e=$('pwderr');e.style.display='none';if(a!==b){e.textContent='Le password non coincidono';e.style.display='block';return;}
+  try{await request('/api/change-password',{method:'POST',body:{current_password:$('pwd-current').value,new_password:a}});ME=await request('/api/me');$('pwd-current').value=$('pwd-new').value=$('pwd-confirm').value='';await showApp();}
+  catch(x){e.textContent=x.message;e.style.display='block';}
+}
+
+const DOCS_HTML={
+it:`
+<h2>LogMask — guida rapida</h2>
+<p>LogMask <b>pseudonimizza</b> i log di sicurezza per poterli condividere (analista esterno, supporto vendor, assistente AI) senza rivelare i dati che identificano il cliente, mantenendo intatti gli indicatori tecnici (hash, GUID, URL, nomi file, porte, event code).</p>
+<div class="doc-card"><div class="doc-note doc-warn"><b>Pseudonimizzazione, non anonimizzazione.</b> Chi possiede vault e chiave del tenant può ripristinare i valori. Solo <code>CLIENT-…</code>, <code>secret-…</code> e <code>[ELIDED]</code> sono irreversibili.</div></div>
+
+<h2>Come si usa</h2>
+<h3>Anonimizza</h3>
+<p>Incolla o carica un log, scegli il formato (auto di default) ed elabora. Il report mostra cosa è stato mascherato, tenuto o eliso e, se riconosciuto, il vendor.</p>
+<ul>
+<li><b>Policy IP / URL</b>: non anonimizzare · solo interni/host cliente · tutti (default). Credenziali e token nelle query sono comunque trattati.</li>
+<li><b>Safe mode</b>: elide i campi non classificati (fail-closed). Consigliata attiva.</li>
+<li><b>Profilo di lavoro</b>: preset coerenti (ticket, analisi AI esterna, threat hunting, report).</li>
+</ul>
+<h3>Ripristina</h3>
+<p>Incolla o carica un output mascherato per riottenere gli originali. Richiede il permesso <code>reverse</code> ed è registrato nell'audit. Funziona su testo, strutturati, CSV, <code>.docx</code> e <code>.pdf</code>.</p>
+
+<h2>Formati supportati</h2>
+<p>Testo, CSV/TSV, JSON/NDJSON, CEF, LEEF, Syslog key=value, Word <code>.docx</code>, Outlook <code>.pst</code>, PDF (impaginato o testo).</p>
+
+<h2>Forme dei token</h2>
+<table><tr><th>Tipo</th><th>Esempio</th><th>Reversibile</th></tr>
+<tr><td>utente</td><td><code>usr-4ozopszr</code></td><td>sì</td></tr>
+<tr><td>host / FQDN</td><td><code>host-ri6jxfsb.masked.local</code></td><td>sì</td></tr>
+<tr><td>IPv4</td><td><code>198.18.x.x</code> (int) · <code>198.19.x.x</code> (pub)</td><td>sì</td></tr>
+<tr><td>dominio Windows</td><td><code>DOM-shphyawa</code></td><td>sì</td></tr>
+<tr><td>CF / IBAN / P.IVA</td><td><code>cf-…</code> · <code>iban-…</code> · <code>vat-…</code></td><td>sì</td></tr>
+<tr><td>indirizzo / persona</td><td><code>addr-…</code> · <code>person-…</code></td><td>sì</td></tr>
+<tr><td>segreto</td><td><code>secret-…</code></td><td><b>no</b></td></tr>
+<tr><td>nome cliente</td><td><code>CLIENT-…</code></td><td><b>no</b></td></tr>
+<tr><td>eliso</td><td><code>[ELIDED]</code></td><td><b>no</b></td></tr></table>
+
+<h2>Campi non tracciati</h2>
+<p>Nel report, ogni campo che nessun kit ha classificato ha una tendina con <b>mantieni · pseudonimizza · elidi</b> e il pulsante <b>Salva config campi mancanti</b>. Le scelte valgono per nome campo su ogni formato, con hot reload. Un campo senza scelta resta eliso in Safe mode.</p>
+
+<h2>Amministrazione</h2>
+<h3>Reset vault (per tenant)</h3>
+<p>Archivia il vault del tenant: gli export già condivisi non sono più reversibili. I token non cambiano.</p>
+<h3>Reset secret (master key)</h3>
+<div class="doc-note doc-warn"><b>Globale e distruttivo.</b> Rigenera la master key: da qui in poi ogni token cambia e OGNI vault smette di essere reversibile. Vecchia chiave e vault vengono archiviati (recuperabili solo insieme). Nessuno viene disconnesso. Conferma digitando <code>RESET</code> nel pop-up.</div>
+
+<h2>Sicurezza in breve</h2>
+<ul>
+<li>Sessioni HttpOnly + SameSite=strict, CSRF double-submit, Argon2, rate-limit sul login.</li>
+<li>Vault AES-GCM per tenant; chiave master 0600; blind index per la ricerca senza decifrare.</li>
+<li>Ruoli: operator · analyst · reverser · admin. Il reverse è un privilegio distinto e verrà auditato.</li>
+<li>Bind di default <code>0.0.0.0</code> (LAN): per uso solo host imposta <code>LOGMASK_BIND=127.0.0.1</code>.</li>
+</ul>
+<div class="doc-note">Documentazione tecnica completa (EN/IT) e PDF impaginato in <code>docs/</code> nel progetto. Questa scheda è un riassunto operativo.</div>
+`,
+en:`
+<h2>LogMask — quick guide</h2>
+<p>LogMask <b>pseudonymizes</b> security logs so they can be shared (external analyst, vendor support, AI assistant) without disclosing client-identifying data, while keeping technical indicators (hashes, GUIDs, URLs, file names, ports, event codes) intact.</p>
+<div class="doc-card"><div class="doc-note doc-warn"><b>Pseudonymization, not anonymization.</b> Whoever holds the tenant vault and key can restore the values. Only <code>CLIENT-…</code>, <code>secret-…</code> and <code>[ELIDED]</code> are irreversible.</div></div>
+
+<h2>How to use it</h2>
+<h3>Anonymize</h3>
+<p>Paste or upload a log, pick the format (auto by default) and process. The report shows what was masked, kept or elided and, when recognized, the vendor.</p>
+<ul>
+<li><b>IP / URL policy</b>: do not anonymize · internal/customer hosts only · all (default). Credentials and query tokens are handled regardless.</li>
+<li><b>Safe mode</b>: elide unclassified fields (fail-closed). Recommended on.</li>
+<li><b>Workflow profile</b>: coherent presets (ticket, external AI analysis, threat hunting, report).</li>
+</ul>
+<h3>Restore</h3>
+<p>Paste or upload a masked output to get the originals back. Requires the <code>reverse</code> permission and is audited. Works on text, structured, CSV, <code>.docx</code> and <code>.pdf</code>.</p>
+
+<h2>Supported formats</h2>
+<p>Text, CSV/TSV, JSON/NDJSON, CEF, LEEF, Syslog key=value, Word <code>.docx</code>, Outlook <code>.pst</code>, PDF (laid-out or text).</p>
+
+<h2>Token shapes</h2>
+<table><tr><th>Kind</th><th>Example</th><th>Reversible</th></tr>
+<tr><td>user</td><td><code>usr-4ozopszr</code></td><td>yes</td></tr>
+<tr><td>host / FQDN</td><td><code>host-ri6jxfsb.masked.local</code></td><td>yes</td></tr>
+<tr><td>IPv4</td><td><code>198.18.x.x</code> (int) · <code>198.19.x.x</code> (pub)</td><td>yes</td></tr>
+<tr><td>Windows domain</td><td><code>DOM-shphyawa</code></td><td>yes</td></tr>
+<tr><td>tax id / IBAN / VAT</td><td><code>cf-…</code> · <code>iban-…</code> · <code>vat-…</code></td><td>yes</td></tr>
+<tr><td>address / person</td><td><code>addr-…</code> · <code>person-…</code></td><td>yes</td></tr>
+<tr><td>secret</td><td><code>secret-…</code></td><td><b>no</b></td></tr>
+<tr><td>client name</td><td><code>CLIENT-…</code></td><td><b>no</b></td></tr>
+<tr><td>elided</td><td><code>[ELIDED]</code></td><td><b>no</b></td></tr></table>
+
+<h2>Untracked fields</h2>
+<p>In the report, each field no kit classified has a dropdown with <b>keep · pseudonymize · elide</b> and a <b>Save missing-field config</b> button. Choices apply by field name across every format, with hot reload. A field with no choice stays elided in Safe mode.</p>
+
+<h2>Administration</h2>
+<h3>Vault reset (per tenant)</h3>
+<p>Archives the tenant vault: already-shared exports are no longer reversible. Tokens do not change.</p>
+<h3>Reset secret (master key)</h3>
+<div class="doc-note doc-warn"><b>Global and destructive.</b> Regenerates the master key: from now on every token changes and EVERY vault stops being reversible. The old key and vaults are archived (recoverable only together). Nobody is logged out. Confirm by typing <code>RESET</code> in the pop-up.</div>
+
+<h2>Security at a glance</h2>
+<ul>
+<li>HttpOnly + SameSite=strict sessions, CSRF double-submit, Argon2, login rate-limit.</li>
+<li>Per-tenant AES-GCM vault; 0600 master key; blind index for lookup without decrypting.</li>
+<li>Roles: operator · analyst · reverser · admin. Reverse is a distinct privilege and is audited.</li>
+<li>Default bind <code>0.0.0.0</code> (LAN): for host-only set <code>LOGMASK_BIND=127.0.0.1</code>.</li>
+</ul>
+<div class="doc-note">Full technical documentation (EN/IT) and a paginated PDF live in <code>docs/</code> in the project. This card is an operational summary.</div>
+`};
+function renderDocs(){$('docs-body').innerHTML=DOCS_HTML[LANG]||DOCS_HTML.en;}
+function tab(which){for(const n of ['anon','sessions','deanon','kits','admin','docs']){const p=$('pane-'+n),t=$('tab-'+n);if(p)p.style.display=n===which?'':'none';if(t)t.classList.toggle('on',n===which);}}
+bindBinaryPicker('file-pst','file-pst-name');
+bindBinaryPicker('file-pdf','file-pdf-name');
+bindBinaryPicker('file-pdf-restore','file-pdf-restore-name');
+bindBinaryPicker('file-docx','file-docx-name');
+bindBinaryPicker('file-docx-restore','file-docx-restore-name');
+$('tab-anon').onclick=()=>tab('anon');$('tab-sessions').onclick=()=>tab('sessions');$('tab-deanon').onclick=()=>tab('deanon');$('tab-admin').onclick=()=>tab('admin');$('tab-kits').onclick=()=>{tab('kits');loadKitStudio();};$('tab-docs').onclick=()=>{tab('docs');renderDocs();};
+translateDom();
+function tenantValue(){const v=$('tenant').value.trim().toLowerCase();if(!/^[a-z0-9][a-z0-9._-]{1,63}$/.test(v)||v.startsWith('.')||v.includes('..'))throw new Error(t('tenant non valido'));$('tenant').value=v;localStorage.setItem('logmask-tenant',v);return v;}
+$('tenant').addEventListener('change',()=>{try{tenantValue();refreshVault();}catch(e){showErr(e.message);}});
+function copyOut(id,btn){const v=$(id).value;if(!v)return;const done=()=>{const prev=btn.textContent;btn.textContent=t('Copiato');setTimeout(()=>btn.textContent=prev,1200)};if(navigator.clipboard&&window.isSecureContext)navigator.clipboard.writeText(v).then(done);else{$(id).select();document.execCommand('copy');done();}}
+function emptyFileMeta(kind){
+  const text=kind==='anon'?'Trascina qui uno o più file testuali oppure usa “Carica file”.':'Trascina qui uno o più file pseudonimizzati oppure usa “Carica file”.';
+  const el=$(kind+'-filemeta');el.classList.remove('loaded');el.textContent=text;
+}
+function clearBatch(kind){FILE_BATCH[kind]=[];BATCH_RESULTS[kind]=[];FILE_STATE[kind]=null;$(kind+'-batch').classList.remove('visible');$(kind+'-batch').innerHTML='';}
+function clearAnon(){clearBatch('anon');$('file-anon').value='';emptyFileMeta('anon');$('in-anon').value='';$('out-anon').value='';$('copy-anon').disabled=false;$('download-anon').disabled=true;$('go-anon').textContent='Anonimizza';$('report').style.display='none';hideErr();}
+function clearDeanon(){clearBatch('deanon');$('file-deanon').value='';emptyFileMeta('deanon');$('in-deanon').value='';$('out-deanon').value='';$('download-deanon').disabled=true;$('go-deanon').textContent='Ripristina';$('deanon-chips').innerHTML='';hideErr();}
+function humanBytes(n){if(n<1024)return n+' B';if(n<1024*1024)return (n/1024).toFixed(1)+' KiB';return (n/1024/1024).toFixed(2)+' MiB';}
+function outputName(kind){
+  const ok=(BATCH_RESULTS[kind]||[]).filter(r=>r.ok&&r.output&&!r.blocked);
+  if(ok.length>1)return kind==='anon'?workflowPrefix()+'-anonymized-batch.zip':workflowPrefix()+'-restored-batch.zip';
+  if(ok.length===1)return outputFileNameFor(ok[0].name,kind);
+  const st=FILE_STATE[kind],fallback=kind==='anon'?'log-anonimizzato.txt':'log-ripristinato.txt';if(!st)return fallback;
+  const name=st.name,idx=name.lastIndexOf('.'),base=idx>0?name.slice(0,idx):name,ext=idx>0?name.slice(idx):'.txt';
+  return base+(kind==='anon'?'.anonymized':'.restored')+ext;
+}
+function workflowPrefix(){let t='tenant';try{t=tenantValue();}catch(_){}const p=$('workflow-profile')?.value||'manual';return safeFileName(`logmask-${t}-${p}`);}
+function outputFileNameFor(original,kind){const clean=safeFileName(original||'log.txt'),idx=clean.lastIndexOf('.'),base=idx>0?clean.slice(0,idx):clean,ext=idx>0?clean.slice(idx):'.txt';const p=$('workflow-profile')?.value||'manual';return `${base}.${p}`+(kind==='anon'?'.anonymized':'.restored')+ext;}
+function safeFileName(name){return String(name||'file.txt').replace(/[\\/:*?"<>|\x00-\x1f]/g,'_').replace(/^\.+/,'_').slice(0,160)||'file.txt';}
+function crc32(bytes){let c=-1;for(const b of bytes){c=(c>>>8)^CRC_TABLE[(c^b)&255];}return (c^-1)>>>0;}
+const CRC_TABLE=(()=>{const t=[];for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=(c&1)?(0xedb88320^(c>>>1)):(c>>>1);t[n]=c>>>0;}return t;})();
+function u16(n){return [n&255,(n>>>8)&255];}function u32(n){return [n&255,(n>>>8)&255,(n>>>16)&255,(n>>>24)&255];}
+function dosDateTime(){const d=new Date();return {time:((d.getHours()<<11)|(d.getMinutes()<<5)|Math.floor(d.getSeconds()/2))&0xffff,date:(((d.getFullYear()-1980)<<9)|((d.getMonth()+1)<<5)|d.getDate())&0xffff};}
+function zipBlob(entries){
+  const enc=new TextEncoder(),files=[],central=[];let offset=0;const dt=dosDateTime();
+  for(const e of entries){const nameBytes=enc.encode(safeFileName(e.name)),data=enc.encode(e.text||''),crc=crc32(data);
+    const local=new Uint8Array([0x50,0x4b,0x03,0x04,...u16(20),...u16(0x0800),...u16(0),...u16(dt.time),...u16(dt.date),...u32(crc),...u32(data.length),...u32(data.length),...u16(nameBytes.length),...u16(0),...nameBytes,...data]);
+    files.push(local);central.push({nameBytes,crc,size:data.length,offset});offset+=local.length;
+  }
+  const cd=[];for(const c of central){cd.push(new Uint8Array([0x50,0x4b,0x01,0x02,...u16(20),...u16(20),...u16(0x0800),...u16(0),...u16(dt.time),...u16(dt.date),...u32(c.crc),...u32(c.size),...u32(c.size),...u16(c.nameBytes.length),...u16(0),...u16(0),...u16(0),...u16(0),...u32(0),...u32(c.offset),...c.nameBytes]));}
+  const cdSize=cd.reduce((a,b)=>a+b.length,0),end=new Uint8Array([0x50,0x4b,0x05,0x06,...u16(0),...u16(0),...u16(central.length),...u16(central.length),...u32(cdSize),...u32(offset),...u16(0)]);
+  return new Blob([...files,...cd,end],{type:'application/zip'});
+}
+function downloadOutput(kind){
+  const batch=(BATCH_RESULTS[kind]||[]).filter(r=>r.ok&&r.output&&!r.blocked);
+  let blob;if(batch.length>1){blob=zipBlob(batch.map(r=>({name:outputFileNameFor(r.name,kind),text:r.output})));}
+  else{const id=kind==='anon'?'out-anon':'out-deanon',text=$(id).value;if(!text)return;blob=new Blob([text],{type:'text/plain;charset=utf-8'});}
+  const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=outputName(kind);document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function formatFromName(name){
+  const ext=(name.toLowerCase().match(/\.([^.]+)$/)||[])[1]||'';
+  return ({csv:'csv',tsv:'csv',json:'json',ndjson:'ndjson',jsonl:'ndjson',cef:'cef',leef:'leef',syslog:'syslog'})[ext]||null;
+}
+function detectFormatClient(text,name){
+  const byName=formatFromName(name);if(byName)return byName;const t=text.trim(),lines=t.split(/\r?\n/).filter(x=>x.trim());
+  if(/^CEF:\d+\|/.test(t))return 'cef';if(/^LEEF:\d+(?:\.\d+)?\|/.test(t))return 'leef';
+  if(lines.length&&lines.every(x=>/^<\d{1,3}>/.test(x)&&/\b[A-Za-z][\w.:-]*=/.test(x)))return 'syslog';
+  if(t.startsWith('{')||t.startsWith('[')){try{JSON.parse(t);return 'json';}catch(_){}}
+  if(lines.length>1&&lines.every(x=>{try{JSON.parse(x);return true;}catch(_){return false;}}))return 'ndjson';
+  if(lines.length>1){for(const d of [',',';','\t','|']){const n=(lines[0].match(new RegExp(d==='\t'?'\t':'\\'+d,'g'))||[]).length;if(n>=2&&lines.slice(1,8).filter(x=>(x.match(new RegExp(d==='\t'?'\t':'\\'+d,'g'))||[]).length===n).length>=Math.min(2,lines.length-1))return 'csv';}}
+  return 'text';
+}
+function hasBinaryMagic(b){
+  const sig=(...xs)=>xs.every((x,i)=>b[i]===x),ascii=x=>x.split('').every((c,i)=>b[i]===c.charCodeAt(0));
+  return sig(0x25,0x50,0x44,0x46)||sig(0x50,0x4b,0x03,0x04)||sig(0x89,0x50,0x4e,0x47)||sig(0xff,0xd8,0xff)||ascii('GIF8')||sig(0x1f,0x8b)||sig(0x37,0x7a,0xbc,0xaf)||ascii('Rar!')||sig(0x7f,0x45,0x4c,0x46)||ascii('MZ')||ascii('SQLite format 3')||sig(0xd0,0xcf,0x11,0xe0);
+}
+function decodeTextFile(buffer){
+  const b=new Uint8Array(buffer);if(hasBinaryMagic(b))throw new Error('Il file è binario o usa un formato archivio/documento non supportato');let encoding='UTF-8',text;
+  if(b.length>=2&&b[0]===0xff&&b[1]===0xfe){encoding='UTF-16LE';text=new TextDecoder('utf-16le',{fatal:true}).decode(b);}
+  else if(b.length>=2&&b[0]===0xfe&&b[1]===0xff){encoding='UTF-16BE';text=new TextDecoder('utf-16be',{fatal:true}).decode(b);}
+  else{try{text=new TextDecoder('utf-8',{fatal:true}).decode(b);}catch(_){encoding='Windows-1252';text=new TextDecoder('windows-1252').decode(b);}}
+  text=text.replace(/^\uFEFF/,'');const sample=text.slice(0,65536),bad=[...sample].filter(c=>{const n=c.charCodeAt(0);return n<32&&!['\t','\n','\r','\f','\b'].includes(c);}).length;
+  if(sample.includes('\u0000')||bad>Math.max(8,sample.length*.02))throw new Error('Il file sembra binario o contiene troppi caratteri di controllo');
+  return {text,encoding};
+}
+async function readTextFile(file){
+  const max=ME?.max_file_bytes||DEFAULT_MAX_FILE_BYTES;if(!file)throw new Error('File non valido');
+  if(file.size===0)throw new Error(`${file.name}: ${t('il file è vuoto')}`);if(file.size>max)throw new Error(`${file.name}: ${t('File troppo grande ')}${humanBytes(file.size)}${t('. Limite ')}${humanBytes(max)}.`);
+  const decoded=decodeTextFile(await file.arrayBuffer()),decodedBytes=new TextEncoder().encode(decoded.text).length;if(decodedBytes>max)throw new Error(`${file.name}: contenuto decodificato troppo grande ${humanBytes(decodedBytes)}. Limite ${humanBytes(max)}.`);
+  return {name:file.name,size:file.size,encoding:decoded.encoding,format:detectFormatClient(decoded.text,file.name),text:decoded.text};
+}
+function renderBatch(kind){
+  const items=FILE_BATCH[kind],box=$(kind+'-batch');if(!items.length){box.classList.remove('visible');box.innerHTML='';return;}
+  const results=BATCH_RESULTS[kind]||[],done=results.filter(r=>r.done).length,ok=results.filter(r=>r.ok&&!r.blocked).length,blocked=results.filter(r=>r.blocked||r.error).length,pct=items.length?Math.round(100*done/items.length):0;
+  box.classList.add('visible');box.innerHTML=`<div class="batch-head"><span>${t('Sessione multi-file · ')}${items.length}${t(' file')}</span><span class="batch-actions"><div class="progress"><span style="width:${pct}%"></span></div>${done}/${items.length} ${t('completati')} · OK ${ok} · ${t('bloccati/errori')} ${blocked}</span></div><table class="batch-table"><thead><tr><th>#</th><th>${t('file')}</th><th>${t('formato')}</th><th>${t('dimensione')}</th><th>${t('stato')}</th></tr></thead><tbody>${items.map((f,i)=>{const r=results[i]||{};const cls=r.error||r.blocked?'batch-status-blocked':r.ok?'batch-status-ok':'batch-status-pending';const st=r.error?t('errore'):r.blocked?t('bloccato'):r.ok?'ok':BATCH_RUNNING?t('in coda'):t('pronto');return `<tr><td>${i+1}</td><td>${esc(f.name)}</td><td>${esc(f.format.toUpperCase())}</td><td>${humanBytes(f.size)}</td><td class="${cls}">${st}</td></tr>`;}).join('')}</tbody></table>`;
+}
+async function loadTextFiles(files,kind){
+  hideErr();const arr=[...(files||[])];if(!arr.length)return;
+  // v0.22.3: .pst e .docx non sono file di testo: hanno un percorso dedicato.
+  // Prima venivano letti come testo e fallivano con un errore generico (o, se
+  // la card era nascosta, senza che l'utente capisse dove andare).
+  const special=arr.find(f=>/\.(pst|docx)$/i.test(f.name||''));
+  if(special){
+    const isPst=/\.pst$/i.test(special.name);
+    showErr(`${special.name}: `+(isPst
+      ? t('e\u2019 un archivio Outlook: usa la card "Archivio Outlook .pst" piu\u2019 in basso, non questo riquadro.')
+      : t('e\u2019 un documento Word: usa la card "Documento Word .docx" piu\u2019 in basso, non questo riquadro.')));
+    const card=$(isPst?'pst-card':'docx-card');
+    if(card) card.scrollIntoView({behavior:'smooth',block:'center'});
+    return;
+  }
+  clearBatch(kind);const items=[];
+  for(const f of arr)items.push(await readTextFile(f));
+  FILE_BATCH[kind]=items;FILE_STATE[kind]=items.length===1?items[0]:{name:`batch-${items.length}-files`,size:items.reduce((a,b)=>a+b.size,0),encoding:'mixed',format:'batch'};
+  const target=kind==='anon'?'in-anon':'in-deanon',select=kind==='anon'?'fmt':'deanon-fmt',meta=$(kind+'-filemeta');
+  if(items.length===1){$(target).value=items[0].text;$(select).value=items[0].format;meta.classList.add('loaded');meta.innerHTML=`<span class="filename">${esc(items[0].name)}</span><span class="filesize">${humanBytes(items[0].size)}</span><span class="fileformat">${esc(items[0].format.toUpperCase())}</span><span class="encoding">${esc(items[0].encoding)}</span>`;}
+  else{$(target).value=`${t('Sessione multi-file caricata: ')}${items.length}${t(' file.\nIl contenuto completo resta in memoria browser e viene elaborato file per file.\nAnteprima primo file (')}${items[0].name}):\n\n`+items[0].text.slice(0,12000);$(select).value='auto';meta.classList.add('loaded');meta.innerHTML=`<span class="filename">${items.length}${t(' file caricati in sessione')}</span><span class="filesize">${humanBytes(items.reduce((a,b)=>a+b.size,0))}</span><span class="fileformat">batch</span>`;}
+  if(kind==='anon'){$('out-anon').value='';$('download-anon').disabled=true;$('go-anon').textContent=items.length>1?'Anonimizza batch':'Anonimizza';$('report').style.display='none';}else{$('out-deanon').value='';$('download-deanon').disabled=true;$('go-deanon').textContent=items.length>1?'Ripristina batch':'Ripristina';$('deanon-chips').innerHTML='';}
+  renderBatch(kind);
+}
+function bindFileLoader(kind){
+  const input=$('file-'+kind),card=$(kind+'-upload-card');input.addEventListener('change',async()=>{try{await loadTextFiles(input.files,kind);}catch(e){showErr(t('Caricamento file: ')+e.message);input.value='';}});
+  for(const ev of ['dragenter','dragover'])card.addEventListener(ev,e=>{e.preventDefault();e.stopPropagation();card.classList.add('dragover');});
+  for(const ev of ['dragleave','drop'])card.addEventListener(ev,e=>{e.preventDefault();e.stopPropagation();card.classList.remove('dragover');});
+  card.addEventListener('drop',async e=>{const files=e.dataTransfer?.files;if(!files?.length)return;try{await loadTextFiles(files,kind);}catch(x){showErr(t('Caricamento file: ')+x.message);}});
+}
+function syncIpMode(){const none=$('ip-mode').value==='none';$('subnet').disabled=none;$('subnet-wrap').title=none?'Non applicabile quando gli IP vengono mantenuti':'';}
+async function loadWorkflowProfiles(){
+  const j=await request('/api/workflow-profiles');WORKFLOW_PROFILES=j.profiles||[];
+  $('workflow-profile').innerHTML='<option value="manual">manuale / personalizzato</option>'+WORKFLOW_PROFILES.map(p=>`<option value="${esc(p.id)}">${esc(p.label)}</option>`).join('');
+}
+function selectedWorkflow(){const id=$('workflow-profile').value;return WORKFLOW_PROFILES.find(p=>p.id===id)||null;}
+function applyDlpPolicy(policy){document.querySelectorAll('.dlp-select').forEach(s=>{if(policy&&policy[s.dataset.category])s.value=policy[s.dataset.category];});}
+function applyWorkflowProfile(id){const p=WORKFLOW_PROFILES.find(x=>x.id===id);if(!p){$('workflow-desc').textContent='Profilo manuale: le impostazioni correnti restano personalizzate.';return;}
+  const st=p.settings||{};$('workflow-desc').textContent=p.description||'';
+  if(st.format)$('fmt').value=st.format;if(st.catalog!==undefined)$('catalog').value=st.catalog||'';
+  if(st.ip_mode)$('ip-mode').value=st.ip_mode;if(st.url_mode)$('url-mode').value=st.url_mode;if(st.safe_mode!==undefined)$('safe').checked=!!st.safe_mode;
+  if(st.preserve_subnet!==undefined)$('subnet').checked=!!st.preserve_subnet;
+  if(st.mask_tenant_networks!==undefined)$('tenantnet').checked=!!st.mask_tenant_networks;
+  applyDlpPolicy(st.dlp_policy||{});syncIpMode();localStorage.setItem('logmask-workflow-profile',id);
+}
+function workflowTemplateTitle(profile){return profile?.label||'Workflow manuale';}
+function workflowSummary(j){const vk=j?.vendor_kit||{},cov=j?.coverage||{};return [
+  `Tenant: ${j?.tenant||tenantValue()}`,
+  `Workflow: ${workflowTemplateTitle(selectedWorkflow())}`,
+  `Formato: ${(j?.format||$('fmt').value).toUpperCase()}`,
+  `Kit: ${vk.label||j?.catalog||$('catalog').value||'Generic/auto'}`,
+  `Policy IP: ${j?.ip_mode||$('ip-mode').value}`,
+  `${t('Stato verifica: ')}${j?.blocked?t('BLOCCATO'):'OK'}`,
+  `${t('Campi fuori catalogo: ')}${cov.unknown_total||0}`,
+  `${t('Elisi: ')}${j?.elided||0}`,
+  `Failed: ${j?.failed||0}`,
+].join('\n');}
+function generateWorkflowTemplate(){
+  const j=LAST_ANON_RESPONSE,profile=selectedWorkflow(),output=$('out-anon').value||'';
+  const base=workflowSummary(j);let body='';
+  if((profile?.template||'')==='ticket')body=`Oggetto: [SOC] Segnalazione di sicurezza - <cliente> - <titolo alert>\n\nSintesi:\n- <descrivere evento e impatto>\n\nEvidenze anonimizzate:\n${output}\n\nVerifiche LogMask:\n${base}\n\nAzioni richieste:\n- Verificare legittimità attività su asset/utente pseudonimizzati.\n- Confermare eventuali azioni di contenimento.`;
+  else if((profile?.template||'')==='ai')body=`Analizza il seguente evento SOC usando solo le evidenze anonimizzate.\nNon tentare reidentificazione. Restituisci: classificazione FP/TP, segnali tecnici, ipotesi, query di hunting e raccomandazioni.\n\nContesto LogMask:\n${base}\n\nEvidenze:\n${output}`;
+  else if((profile?.template||'')==='field_quality')body=`Valuta la qualità dell'anonimizzazione del seguente evento SOC usando solo le evidenze anonimizzate.
+
+Non analizzare l'incidente come FP/TP.
+Non tentare reidentificazione.
+Non inferire identità reali da pseudonimi.
+Concentrati solo su:
+1. campi rimasti potenzialmente sensibili;
+2. campi elisi che riducono troppo il valore investigativo;
+3. campi pseudonimizzati in modo scorretto;
+4. metadati SOC che sarebbe meglio mantenere;
+5. campi che dovrebbero essere pseudonimizzati invece che elisi;
+6. campi che dovrebbero essere elisi invece che mantenuti;
+7. raccomandazioni di tuning per LogMask.
+
+Contesto LogMask:
+${base}
+
+Restituisci:
+- giudizio sintetico: OK / migliorabile / non idoneo;
+- problemi bloccanti;
+- problemi non bloccanti;
+- campi da cambiare di classificazione;
+- suggerimenti per nuovi test di regressione;
+- valutazione utilità residua per analisi AI.
+
+Evidenze:
+${output}`;
+  else if((profile?.template||'')==='hunting')body=`Obiettivo hunting:\n- Cercare ricorrenze correlate agli indicatori sotto.\n\nContesto:\n${base}\n\nEvidenze normalizzate:\n${output}\n\nQuery/azioni da completare:\n- <dataset>\n- <time range>\n- <campi chiave>`;
+  else body=`Report tecnico anonimizzato\n\n${base}\n\nEvidenze:\n${output}\n\nNote analista:\n- <inserire conclusioni e limitazioni>`;
+  if(APPROVED_AMBIGUOUS.size)body+=`\n\nCampi ambigui approvati in sessione dall'analista:\n${Array.from(APPROVED_AMBIGUOUS).sort().join(', ')}`;
+  $('workflow-template').value=body;$('workflow-panel').style.display='grid';return body;
+}
+function renderCompare(){const original=LAST_ANON_ORIGINAL||$('in-anon').value,anon=$('out-anon').value;if(!original||!anon){showErr('Serve un input e un output anonimizzato per il confronto.');return;}
+  const a=original.split(/\r?\n/),b=anon.split(/\r?\n/),n=Math.max(a.length,b.length);let html='';
+  for(let i=0;i<n;i++){const left=a[i]??'',right=b[i]??'',cls=left===right?'equal':'changed';html+=`<div class="diffline ${cls}"><span class="ln">${i+1}</span><span>${esc(left)}</span><span>${esc(right)}</span></div>`;}
+  $('diffbox').innerHTML=html;$('workflow-panel').style.display='grid';
+}
+function renderApprovals(fields){LAST_UNKNOWN_FIELDS=fields||[];if(!LAST_UNKNOWN_FIELDS.length){$('approval-list').innerHTML='<span class="hint">Nessun campo ambiguo rilevato.</span>';return;}
+  $('approval-list').innerHTML=LAST_UNKNOWN_FIELDS.map(f=>`<label><input type="checkbox" class="amb-field" value="${esc(f)}"> ${esc(f)}</label>`).join('');$('workflow-panel').style.display='grid';
+}
+function approveAmbiguousFields(){document.querySelectorAll('.amb-field:checked').forEach(i=>APPROVED_AMBIGUOUS.add(i.value));renderHistory();generateWorkflowTemplate();}
+function copyAmbiguousFields(){const txt=(LAST_UNKNOWN_FIELDS||[]).join('\n');if(!txt){showErr('Nessun campo ambiguo da copiare.');return;}navigator.clipboard?.writeText(txt);}
+function addHistory(kind,result){SESSION_HISTORY.unshift({ts:new Date(),kind,profile:$('workflow-profile').value,tenant:result?.tenant||tenantValue(),format:result?.format||'auto',blocked:!!result?.blocked,elided:result?.elided||0,failed:result?.failed||0});SESSION_HISTORY=SESSION_HISTORY.slice(0,20);renderHistory();}
+function renderHistory(){if(!SESSION_HISTORY.length){$('history-list').innerHTML='<span class="hint">Nessuna lavorazione nella sessione corrente.</span>';return;}
+  $('history-list').innerHTML=SESSION_HISTORY.map(h=>`<div class="history-item">${h.ts.toLocaleTimeString()} · ${esc(h.kind)} · ${esc(h.tenant)} · ${esc(h.profile)} · ${esc(h.format)} · ${h.blocked?'BLOCCATO':'OK'} · ${t('elisi')} ${h.elided} · failed ${h.failed}</div>`).join('');
+}
+function downloadWorkflowTemplate(){const text=generateWorkflowTemplate();const blob=new Blob([text],{type:'text/plain;charset=utf-8'});const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=workflowPrefix()+'.template.txt';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+
+async function runAnon(){if(FILE_BATCH.anon.length>1)return runBatchAnon();hideErr();const b=$('go-anon');b.disabled=true;try{const st=FILE_STATE.anon,source=st?'upload:'+st.format:'paste';const j=await request('/api/anonymize',{method:'POST',body:anonRequestBody($('in-anon').value,$('fmt').value,($('workflow-profile').value||'manual')+':'+source)});BATCH_RESULTS.anon=[];LAST_ANON_RESPONSE=j;LAST_ANON_ORIGINAL=$('in-anon').value;$('out-anon').value=j.output;$('copy-anon').disabled=!!j.blocked;$('download-anon').disabled=!!j.blocked||!j.output;renderReport(j);addHistory('anon',j);generateWorkflowTemplate();await refreshVault();}catch(e){showErr(t('Anonimizzazione fallita: ')+e.message);$('download-anon').disabled=true;}finally{b.disabled=false;}}
+async function runBatchAnon(){hideErr();const items=FILE_BATCH.anon;if(!items.length)return;const b=$('go-anon');b.disabled=true;BATCH_RUNNING=true;BATCH_RESULTS.anon=items.map(()=>({done:false}));renderBatch('anon');
+  for(let i=0;i<items.length;i++){const f=items[i];try{const j=await request('/api/anonymize',{method:'POST',body:anonRequestBody(f.text,f.format,($('workflow-profile').value||'manual')+':batch:'+f.format)});BATCH_RESULTS.anon[i]={done:true,ok:true,blocked:!!j.blocked,name:f.name,format:j.format,output:j.output,report:j};}
+    catch(e){BATCH_RESULTS.anon[i]={done:true,ok:false,error:e.message,name:f.name};}renderBatch('anon');}
+  BATCH_RUNNING=false;b.disabled=false;const ok=BATCH_RESULTS.anon.filter(r=>r.ok&&!r.blocked),bad=BATCH_RESULTS.anon.filter(r=>!r.ok||r.blocked);$('out-anon').value=batchSummary('anon');$('copy-anon').disabled=true;$('download-anon').disabled=ok.length===0;if(ok.length===1){$('out-anon').value=ok[0].output;$('copy-anon').disabled=false;}if(ok.length===1)renderReport(ok[0].report);else{ $('report').style.display='block';$('detect').textContent=`${t('tenant ')}${tenantValue()} · ${t('batch anonimizzazione')} · ${items.length}${t(' file')}`; $('vbar').innerHTML=''; $('vlegend').innerHTML=''; $('warn-exposed').style.display=bad.length?'block':'none'; $('warn-exposed').textContent=bad.length?`${bad.length}${t(' file bloccati o in errore: esclusi dallo ZIP. Digitare output per dettagli.')}`:''; $('unknown-box').style.display='none'; $('elided-box').style.display='none'; $('fields-wrap').innerHTML='';} $('kind-chips').innerHTML=`<span class="chip">${t('file OK')} <b>${ok.length}</b></span><span class="chip ${bad.length?'bad':''}">${t('bloccati/errori')} <b>${bad.length}</b></span>`;addHistory('anon-batch',{tenant:tenantValue(),format:'batch',blocked:bad.length>0,elided:ok.reduce((a,r)=>a+(r.report?.elided||0),0),failed:bad.length});generateWorkflowTemplate();await refreshVault();}
+function batchSummary(kind){const rows=(BATCH_RESULTS[kind]||[]).map((r,i)=>`${i+1}. ${r.name||FILE_BATCH[kind][i]?.name||'file'} — ${r.error?t('ERRORE: ')+r.error:r.blocked?t('BLOCCATO'):'OK'}`);return t('Sessione multi-file ')+(kind==='anon'?t('anonimizzazione'):'reverse')+'\n'+rows.join('\n')+t('\n\nI risultati OK sono scaricabili come ZIP dal pulsante Scarica.');}
+function renderReport(j){
+  $('report').style.display='block';LAST_KITDRY={cols:(j.fields||[]).map(f=>f.column),kit:(j.vendor_kit&&j.vendor_kit.id)||''};const structured=['json','ndjson','syslog','cef','leef'].includes(j.format),ipLabels={none:t('nessun IP anonimizzato'),internal:t('solo IP interni anonimizzati'),all:t('tutti gli IP anonimizzati')};const base=j.format==='csv'?`${t('tenant ')}${j.tenant} · CSV · ${j.rows} ${t('righe')}`:structured?`${t('tenant ')}${j.tenant} · ${j.format.toUpperCase()} · ${j.rows||1}${t(' record')}`:`${t('tenant ')}${j.tenant} · ${t('testo libero')}`;const vk=j.vendor_kit||{},confidence=vk.forced?t('forzato'):(vk.id?Math.round((vk.confidence||0)*100)+'%':t('generico'));$('detect').textContent=base+` · ${t('kit ')}${vk.label||j.catalog||'Generic'} (${confidence}) · ${ipLabels[j.ip_mode]||j.ip_mode}`;
+  const masked=Object.values(j.counts).reduce((a,b)=>a+b,0)+(j.swept||0),elided=j.elided||0;let exposed=j.fields?0:(j.exposed||0),kept=j.fields?0:(j.policy_kept||0),failed=j.failed||0;
+  if(j.fields)for(const f of j.fields){if(f.exposed)exposed+=f.nonempty;else{const pk=f.policy_kept||0;kept+=pk;if(f.action==='keep'&&!pk)kept+=f.nonempty;}}
+  const total=masked+elided+exposed+failed+kept||1,seg=(c,n)=>n?`<div class="seg-${c}" style="width:${(100*n/total).toFixed(2)}%"></div>`:'';
+  $('vbar').innerHTML=seg('masked',masked)+seg('elided',elided)+seg('kept',kept)+seg('exposed',exposed+failed);
+  const li=(c,l,n)=>`<span><i class="seg-${c}"></i>${l} <b>${n}</b></span>`;$('vlegend').innerHTML=li('masked',t('mascherati'),masked)+li('elided',t('elisi'),elided)+li('kept','keep',kept)+li('exposed',t('non conformi'),exposed+failed)+`<span>${t('verifica')} <b>${j.blocked?t('BLOCCATA'):'OK'}</b></span>`;
+  const w=$('warn-exposed');if(j.blocked){w.innerHTML=`<b>${t('OUTPUT BLOCCATO')}</b> — ${exposed}${t(' valori in chiaro, ')}${failed}${t(' controlli falliti.')}`+(j.failed_samples?.length?t(' Campione: ')+j.failed_samples.map(esc).join(' · '):'');w.style.display='block';}else if(j.warning){w.innerHTML=esc(j.warning);w.style.display='block';}else w.style.display='none';
+  const ub=$('unknown-box'),cov=j.coverage;if(cov&&cov.unknown_total){renderApprovals(cov.unknown_fields||[]);renderUnknownFieldControls(ub,cov);ub.style.display='block';}else if(cov){renderApprovals([]);ub.innerHTML=`<b>${t('Copertura kit completa sui campi popolati')}</b> — vendor ${cov.vendor_percent}%${t(' · classificazione ')}${cov.classified_percent}%.`;ub.style.display='block';}else ub.style.display='none';
+  const eb=$('elided-box');if(elided){eb.innerHTML=`<b>${elided}${t(' valori elisi')}</b>`+(j.elided_samples?.length?' — '+j.elided_samples.map(esc).join(' · '):'');eb.style.display='block';}else eb.style.display='none';
+  const dlp=j.dlp||{},dlpChips=Object.entries(dlp.counts||{}).map(([k,v])=>`<span class="chip">DLP ${esc(k)} <b>${v}</b></span>`).join('');
+  $('kind-chips').innerHTML=Object.entries(j.counts).map(([k,v])=>`<span class="chip">${esc(k)} <b>${v}</b></span>`).join('')+dlpChips+((j.policy_kept||0)?`<span class="chip">${t('IP mantenuti per policy')} <b>${j.policy_kept}</b></span>`:'');
+  $('fields-wrap').innerHTML=!j.fields?'':`<table><thead><tr><th>${t('colonna')}</th><th>kind</th><th>${t('azione')}</th><th class="num">${t('valori')}</th><th class="num">mask</th><th class="num">IP keep</th><th class="num">${t('elisi')}</th><th class="num">failed</th></tr></thead><tbody>${j.fields.map(f=>`<tr><td>${esc(f.column)}</td><td>${esc(f.kind||'—')}</td><td>${esc(f.action)}</td><td class="num">${f.nonempty}</td><td class="num">${f.masked}</td><td class="num">${f.policy_kept||0}</td><td class="num">${f.elided}</td><td class="num">${f.failed||0}</td></tr>`).join('')}</tbody></table>`;
+}
+async function runDeanon(){if(FILE_BATCH.deanon.length>1)return runBatchDeanon();hideErr();const b=$('go-deanon');b.disabled=true;try{const st=FILE_STATE.deanon,source=st?'upload:'+st.format:'paste';const j=await request('/api/deanonymize',{method:'POST',body:{tenant:tenantValue(),text:$('in-deanon').value,format:$('deanon-fmt').value,source}});BATCH_RESULTS.deanon=[];$('out-deanon').value=j.output;$('download-deanon').disabled=!j.output;$('deanon-chips').innerHTML=`<span class="chip">${t('risolti')} <b>${j.resolved}</b></span>`+(j.unresolved_total?`<span class="chip bad">${t('non risolti')} <b>${j.unresolved_total}</b></span>`:'');addHistory('reverse',{tenant:tenantValue(),format:j.format,blocked:false,elided:0,failed:j.unresolved_total||0});}catch(e){showErr(t('Ripristino fallito: ')+e.message);$('download-deanon').disabled=true;}finally{b.disabled=false;}}
+async function runBatchDeanon(){hideErr();const items=FILE_BATCH.deanon;if(!items.length)return;const b=$('go-deanon');b.disabled=true;BATCH_RUNNING=true;BATCH_RESULTS.deanon=items.map(()=>({done:false}));renderBatch('deanon');
+  for(let i=0;i<items.length;i++){const f=items[i];try{const j=await request('/api/deanonymize',{method:'POST',body:{tenant:tenantValue(),text:f.text,format:f.format,source:'batch:'+f.format}});BATCH_RESULTS.deanon[i]={done:true,ok:true,name:f.name,format:j.format,output:j.output,resolved:j.resolved,unresolved:j.unresolved_total};}
+    catch(e){BATCH_RESULTS.deanon[i]={done:true,ok:false,error:e.message,name:f.name};}renderBatch('deanon');}
+  BATCH_RUNNING=false;b.disabled=false;const ok=BATCH_RESULTS.deanon.filter(r=>r.ok),bad=BATCH_RESULTS.deanon.filter(r=>!r.ok);$('out-deanon').value=batchSummary('deanon');$('download-deanon').disabled=ok.length===0;if(ok.length===1)$('out-deanon').value=ok[0].output;$('deanon-chips').innerHTML=`<span class="chip">file OK <b>${ok.length}</b></span><span class="chip ${bad.length?'bad':''}">errori <b>${bad.length}</b></span><span class="chip">pseudonimi risolti <b>${ok.reduce((a,r)=>a+(r.resolved||0),0)}</b></span>`;}
+async function loadVendorKits(){const j=await request('/api/vendor-kits');const opts='<option value="">rilevamento automatico</option>'+j.kits.map(k=>`<option value="${esc(k.id)}">${esc(k.label)} · ${esc(k.version)}</option>`).join('');$('catalog').innerHTML=opts;$('kitdry-family').innerHTML=opts;}
+
+function parseHeaderCols(text){return [...new Set(text.split(/[\n\r,;\t|]+/).map(t=>t.trim().replace(/^["']+|["']+$/g,'')).filter(Boolean))].slice(0,4000);}
+function normCol(c){return c.trim().toLowerCase().replace(/\s+/g,'_');}
+function reEsc(t){return t.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');}
+async function runKitDry(){hideErr();const cols=parseHeaderCols($('kitdry-in').value);const st=$('kitdry-status');
+  if(!cols.length){st.textContent=t('nessuna colonna riconosciuta');return;}
+  const b=$('go-kitdry');b.disabled=true;st.textContent=t('analisi\u2026');
+  try{const j=await request('/api/kit-dry-run',{method:'POST',body:{columns:cols,family:$('kitdry-family').value||null,safe_mode:$('kitdry-safe').checked}});renderKitDry(j);st.textContent='';}
+  catch(e){st.textContent=e.message;}finally{b.disabled=false;}}
+function renderKitDry(j){$('kitdry-result').style.display='block';
+  const det=j.detected&&j.detected.id?`${t('kit ')}<b>${esc(j.detected.label||j.detected.id)}</b>${t(' · confidenza ')}${Math.round((j.detected.confidence||0)*100)}%`:`<b>${t('nessun kit rilevato')}</b>${t(' (classificazione generica)')}`;
+  const elided=j.elided||[];
+  $('kitdry-summary').innerHTML=`${det} · ${j.fields.length}${t(' campi analizzati')} · <b>${elided.length} ${t('fuori kit')}${$('kitdry-safe').checked?t(' (elisi in Safe mode)'):''}</b>`;
+  const badge=a=>({mask:'b-mask',text:'b-text',keep:'b-keep',drop:'b-drop',redact:'b-redact'}[a]||'b-keep');
+  const src=v=>{v=String(v||'');if(v.startsWith('vendor:'))return t('kit ')+esc(v.slice(7));if(v.startsWith('config:'))return t('config');if(v==='safe_policy')return t('safe (eliso)');return esc(v||t('euristica'));};
+  $('kitdry-table').innerHTML=`<table><thead><tr><th>${t('colonna')}</th><th>${t('azione')}</th><th>kind</th><th>${t('origine')}</th></tr></thead><tbody>${j.fields.map(f=>`<tr><td>${esc(f.column)}</td><td><span class="badge ${badge(f.action)}">${esc(f.action)}</span></td><td>${esc(f.kind||'\u2014')}</td><td>${src(f.inferred_by)}</td></tr>`).join('')}</tbody></table>`;
+  const ta=$('kitdry-yaml'),hint=$('kitdry-yaml-hint'),cp=$('kitdry-copy');
+  if(elided.length){const kid=(j.detected&&j.detected.id)||'nuovo_kit';
+    const q=t=>`'${t.replace(/'/g,"''")}'`;
+    const rules=elided.map(c=>`  - {pattern: ${q('^'+reEsc(normCol(c))+'$')}, action: mask, kind: opaque}   # TODO: keep se IOC/enum, text se testo libero`).join('\n');
+    ta.value=`# Proposta LogMask \u2014 salva come data/kits/${kid}_extra.yaml (ricaricato a caldo).\n# Default prudente: mask/opaque (token reversibile). Cambia action solo se sicuro.\nid: ${kid}\n${j.detected&&j.detected.id?'mode: extend\n':''}rules:\n${rules}\n`;
+    hint.textContent=t('Regole proposte per i campi fuori kit \u2014 default fail-closed (mask/opaque): rivedi i TODO prima di salvare.');
+    ta.style.display='block';hint.style.display='block';cp.style.display='';}
+  else{ta.style.display='none';hint.style.display='none';cp.style.display='none';ta.value='';}}
+// v0.22.7: un file ancora APERTO da un'altra applicazione (Outlook tiene il
+// .pst, Word il .docx) viene riscritto mentre il browser lo sta caricando.
+// Chrome annulla l'upload (ERR_UPLOAD_FILE_CHANGED) e fetch() fallisce con un
+// generico "Failed to fetch": il server non vede mai la richiesta, quindi non
+// puo' spiegare niente. Leggendo il file in memoria PRIMA di inviarlo l'errore
+// emerge qui, dove sappiamo cosa dire, e l'invio parte da una copia stabile.
+async function stableCopy(f){
+  let buf;
+  try{ buf = await f.arrayBuffer(); }
+  catch(e){ throw new Error(t('impossibile leggere il file: \u00e8 ancora aperto in un\u2019altra applicazione (Outlook / Word). Chiudila oppure lavora su una copia del file.')); }
+  if(!buf.byteLength) throw new Error(t('il file \u00e8 vuoto'));
+  return new File([buf], f.name, {type:f.type||'application/octet-stream'});
+}
+function bindBinaryPicker(inputId, labelId){
+  const input=$(inputId), label=$(labelId);
+  if(!input||!label) return;
+  input.addEventListener('change',()=>{
+    const f=input.files&&input.files[0];
+    if(!f){label.textContent=t('nessun file selezionato');label.classList.remove('loaded');return;}
+    label.textContent=`${f.name} \u00b7 ${humanBytes(f.size)}`;
+    label.classList.add('loaded');
+    hideErr();
+  });
+}
+async function runDocxRestore(){
+  hideErr(); const f=$('file-docx-restore').files[0]; const st=$('docx-restore-status');
+  if(!f){showErr(t('Seleziona un file .docx'));return;}
+  st.textContent=t('elaborazione\u2026');
+  try{
+    const fd=new FormData(); fd.append('file',await stableCopy(f)); fd.append('tenant',tenantValue());
+    const res=await fetch('/api/deanonymize-docx',{method:'POST',headers:{'X-CSRF-Token':decodeURIComponent(cookie('logmask_csrf'))},body:fd});
+    const j=await res.json().catch(()=>({error:t('risposta non valida dal backend')}));
+    if(!res.ok) throw new Error(j.detail||j.error||('errore '+res.status));
+    const bin=atob(j.document_b64); const buf=new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++) buf[i]=bin.charCodeAt(i);
+    const url=URL.createObjectURL(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}));
+    const link=document.createElement('a'); link.href=url; link.download=j.filename; link.click(); URL.revokeObjectURL(url);
+    st.textContent=`${j.restored}/${j.paragraphs} ${t('paragrafi')} \u00b7 ${j.tokens_resolved}/${j.tokens_in} ${t('pseudonimi risolti')}`
+      +(j.tokens_unresolved?` \u00b7 ${j.tokens_unresolved} ${t('NON risolti')}`:'');
+    if(j.tokens_unresolved) showErr(`${j.tokens_unresolved} ${t('pseudonimi non risolti: appartengono a un altro tenant o il vault e\u2019 stato azzerato.')}`);
+  }catch(e){showErr(t('Ripristino documento fallito: ')+e.message,'docx-restore-status');}}
+async function runDocxUpload(){
+  hideErr(); const f=$('file-docx').files[0]; const st=$('docx-status');
+  if(!f){showErr(t('Seleziona un file .docx'));return;}
+  const b=$('go-docx'); b.disabled=true; st.textContent=t('elaborazione\u2026');
+  try{
+    const fd=new FormData();
+    fd.append('file',await stableCopy(f)); fd.append('tenant',tenantValue());
+    fd.append('ip_mode',$('docx-ipmode').value);fd.append('url_mode',$('docx-urlmode').value);
+    fd.append('mask_tenant_networks',$('tenantnet').checked?'true':'false');
+    const res=await fetch('/api/anonymize-docx',{method:'POST',headers:{'X-CSRF-Token':decodeURIComponent(cookie('logmask_csrf'))},body:fd});
+    const j=await res.json().catch(()=>({error:t('risposta non valida dal backend')}));
+    if(!res.ok) throw new Error(j.detail||j.error||('errore '+res.status));
+    const bin=atob(j.document_b64); const buf=new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++) buf[i]=bin.charCodeAt(i);
+    const url=URL.createObjectURL(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}));
+    const link=document.createElement('a'); link.href=url; link.download=j.filename; link.click();
+    URL.revokeObjectURL(url);
+    st.textContent=`${j.changed}/${j.paragraphs} ${t('paragrafi modificati')}`
+      +(j.metadata_scrubbed?` \u00b7 ${j.metadata_scrubbed} ${t('metadati')}`:'')
+      +(j.collapsed?` \u00b7 ${j.collapsed} ${t('con formattazione interna ricomposta')}`:'');
+    if(j.warnings&&j.warnings.length) showErr(j.warnings.join(' '));
+    await refreshVault();
+  }catch(e){showErr(t('Anonimizzazione documento fallita: ')+e.message,'docx-status');}
+  finally{b.disabled=false;}}
+async function resetVault(){
+  const tenant=$('reset-tenant').value.trim().toLowerCase(), conf=$('reset-confirm').value.trim().toLowerCase();
+  const st=$('reset-status'); st.textContent='';
+  if(!tenant){st.textContent=t('indicare il tenant');return;}
+  if(tenant!==conf){st.textContent=t('la conferma non corrisponde');return;}
+  if(!confirm(t('Azzerare il vault di ')+tenant+t('? Gli export gia condivisi non saranno piu reversibili. Il file viene archiviato, non cancellato.')))return;
+  try{const j=await request('/api/admin/vault/reset',{method:'POST',body:{tenant,confirm:conf}});
+    st.textContent=j.archived_as?t('archiviato come ')+j.archived_as:t('nessun vault da azzerare');
+    $('reset-confirm').value=''; await refreshVault();}
+  catch(e){st.textContent=e.message;}}
+const SECRET_WORD='RESET';
+function openSecretModal(){
+  $('secret-modal-title').textContent=t('Reset secret — master key');
+  $('secret-modal-risk').innerHTML=`<b>${t('Operazione globale e irreversibile per gli export gia condivisi.')}</b><ul>`
+    +`<li>${t('Ogni token futuro cambia: lo stesso valore produce uno pseudonimo diverso (secret- compresi).')}</li>`
+    +`<li>${t('OGNI vault esistente, di ogni tenant, smette di essere reversibile.')}</li>`
+    +`<li>${t('Vecchia chiave e vault vengono ARCHIVIATI con timestamp, non cancellati: recuperabili solo insieme.')}</li>`
+    +`<li>${t('Utenti e sessioni non dipendono dalla master key: nessuno viene disconnesso.')}</li></ul>`;
+  $('secret-modal-label').innerHTML=t('Per confermare digita ')+`<code>${SECRET_WORD}</code>`;
+  const inp=$('secret-modal-input');inp.value='';$('secret-modal-status').textContent='';$('secret-modal-status').classList.remove('err-inline');
+  $('secret-modal-go').disabled=true;$('secret-modal').classList.add('open');setTimeout(()=>inp.focus(),30);
+}
+function closeSecretModal(){$('secret-modal').classList.remove('open');}
+function onSecretConfirmInput(){$('secret-modal-go').disabled=($('secret-modal-input').value.trim().toUpperCase()!==SECRET_WORD);}
+async function confirmSecretReset(){
+  const conf=$('secret-modal-input').value.trim(), st=$('secret-modal-status');
+  if(conf.toUpperCase()!==SECRET_WORD)return;
+  const go=$('secret-modal-go');go.disabled=true;st.classList.remove('err-inline');st.textContent=t('rigenerazione in corso…');
+  try{const j=await request('/api/admin/secret/reset',{method:'POST',body:{confirm:conf}});
+    closeSecretModal();
+    const s2=$('secret-status');if(s2)s2.textContent=t('secret rigenerato — ')+`${j.vaults_archived}`+t(' vault archiviati. I nuovi token sono diversi.');
+    await refreshVault();
+  }catch(e){st.textContent=e.message;st.classList.add('err-inline');go.disabled=false;}
+}
+async function loadKitStudio(){const el=$('kits-list');try{const j=await request('/api/kits/files');
+  const urow=f=>{const k=f.kit||{};const st=f.ok?(f.warnings.length?`<span class="badge b-redact">${t('avvisi ')}${f.warnings.length}</span>`:'<span class="badge b-mask">ok</span>'):`<span class="badge b-drop">${t('errori')}</span>`;
+    return `<tr><td>${esc(f.name)}</td><td><span class="badge b-text">${t('utente')}</span></td><td>${esc(k.id||'?')} · ${esc(k.mode||'')}</td><td class="num">${k.rules_kept??'—'}</td><td>${st}</td><td><button class="btn ghost small" onclick="openUserKit('${esc(f.name)}')">${t('Modifica')}</button></td></tr>`;};
+  const brow=k=>`<tr><td>${esc(k.id)}.yaml</td><td><span class="badge b-keep">${t('di serie')}</span></td><td>${esc(k.label)}</td><td class="num">${k.rules}</td><td><span class="badge b-mask">v${esc(k.version)}</span></td><td><button class="btn ghost small" onclick="openBundledKit('${esc(k.id)}')">${t('Apri copia')}</button></td></tr>`;
+  el.innerHTML=`<table><thead><tr><th>${t('file')}</th><th>${t('origine')}</th><th>kit</th><th class="num">${t('regole')}</th><th>${t('stato')}</th><th></th></tr></thead><tbody>${j.user_files.map(urow).join('')}${j.bundled.map(brow).join('')}</tbody></table>`+(j.user_files.length?'':`<div class="filemeta">${t('Nessun kit utente: creane uno con Template o "Apri copia" da un kit di serie. Cartella: ')}${esc(j.user_dir)}</div>`);
+ }catch(e){el.innerHTML='<span class="hint">'+esc(e.message)+'</span>';}}
+async function openUserKit(name){try{const j=await request('/api/kits/files/'+encodeURIComponent(name));$('kit-filename').value=j.name;$('kit-editor').value=j.content;$('kit-delete-btn').style.display='';$('kit-status').textContent='';kitReport(null);}catch(e){$('kit-status').textContent=e.message;}}
+async function openBundledKit(id){try{const j=await request('/api/kits/bundled/'+encodeURIComponent(id));$('kit-filename').value=id+'_custom.yaml';$('kit-editor').value=j.content;$('kit-delete-btn').style.display='none';$('kit-status').textContent=t('copia del kit di serie — salvala come file utente (extend/replace)');kitReport(null);}catch(e){$('kit-status').textContent=e.message;}}
+function kitTemplate(){$('kit-filename').value=$('kit-filename').value||'mio_kit.yaml';$('kit-delete-btn').style.display='none';kitReport(null);
+  $('kit-editor').value=`# Kit utente LogMask — hot reload al salvataggio.\n# id nuovo = kit autonomo (servono fingerprints). id di un kit di serie =\n# estensione (mode: extend, default) o sostituzione totale (mode: replace).\nid: mio_kit\nlabel: Il mio EDR\nfingerprints:\n  - {pattern: '^colonna_inconfondibile$', weight: 8}\nrules:\n  # prima regola che matcha vince; le regole utente vincono su quelle di serie\n  - {pattern: '^(user|username)$', action: mask, kind: user}\n  - {pattern: '.*_ip$',            action: mask, kind: ip}\n  - {pattern: '^hostname$',        action: mask, kind: endpoint}\n  - {pattern: '^(severity|status)$', action: keep}   # enum senza PII\n`;}
+function kitReport(r){const el=$('kit-report');if(!r){el.style.display='none';el.innerHTML='';return;}
+  const li=a=>a.map(t=>'<div>· '+esc(t)+'</div>').join('');
+  el.innerHTML=(r.errors.length?`<b>${t('Errori (bloccano il salvataggio)')}</b>${li(r.errors)}`:'')+(r.warnings.length?`<b>${t('Avvisi (regole scartate dal loader)')}</b>${li(r.warnings)}`:'')+((r.ok&&!r.warnings.length)?`<b>${t('Valido')}</b> — kit ${esc(r.kit.id)} (${esc(r.kit.mode)}), ${r.kit.rules_kept}${t(' regole, ')}${r.kit.fingerprints_kept}${t(' fingerprint')}`:'');
+  el.style.display='block';}
+async function validateKit(){$('kit-status').textContent='';try{const r=await request('/api/kits/validate',{method:'POST',body:{content:$('kit-editor').value}});kitReport(r);}catch(e){$('kit-status').textContent=e.message;}}
+async function saveKitFile(){const name=$('kit-filename').value.trim();$('kit-status').textContent='';
+  try{const j=await request('/api/kits/files/'+encodeURIComponent(name),{method:'PUT',body:{content:$('kit-editor').value}});kitReport(j.report);$('kit-status').textContent=`${t('salvato — registro ricaricato (')}${j.effective_kits}${t(' kit attivi)')}`;$('kit-delete-btn').style.display='';await loadKitStudio();await loadVendorKits();}
+  catch(e){$('kit-status').textContent=e.message;}}
+async function deleteKitFile(){const name=$('kit-filename').value.trim();if(!name)return;if(!confirm(t('Eliminare ')+name+t('? Le regole del file smettono subito di essere applicate.')))return;
+  try{await request('/api/kits/files/'+encodeURIComponent(name),{method:'DELETE'});$('kit-editor').value='';$('kit-filename').value='';$('kit-delete-btn').style.display='none';kitReport(null);$('kit-status').textContent=t('eliminato — registro ricaricato');await loadKitStudio();await loadVendorKits();}
+  catch(e){$('kit-status').textContent=e.message;}}
+async function loadFieldOverrides(){
+  try{const j=await request('/api/field-overrides');FIELD_OVERRIDES=j.overrides||{};}catch(_){FIELD_OVERRIDES={};}
+}
+function fieldOverrideKey(name){return String(name).trim().toLowerCase().replace(/\s+/g,'_');}
+function renderUnknownFieldControls(ub,cov){
+  const fields=cov.unknown_fields||[];
+  const head=`<b>${cov.unknown_total}${t(' campi fuori kit')}</b>${t(' — copertura vendor ')}${cov.vendor_percent}%${t(' · classificazione complessiva ')}${cov.classified_percent}%.`;
+  const opt=(v,cur,label)=>`<option value="${v}"${cur===v?' selected':''}>${t(label)}</option>`;
+  const rows=fields.map(f=>{const k=fieldOverrideKey(f),cur=(FIELD_OVERRIDES[k]&&FIELD_OVERRIDES[k].action)||'';
+    return `<tr><td>${esc(f)}</td><td><select class="fov-select" data-field="${esc(f)}">`
+      +opt('',cur,'auto (Safe: elide)')+opt('keep',cur,'mantieni')+opt('mask',cur,'pseudonimizza')+opt('redact',cur,'elidi')
+      +`</select></td></tr>`;}).join('');
+  ub.innerHTML=head
+    +`<table class="batch-table fov-table"><thead><tr><th>${t('campo')}</th><th>${t('azione')}</th></tr></thead><tbody>${rows}</tbody></table>`
+    +`<div class="actions" style="margin-top:8px"><button class="btn primary small" onclick="saveFieldOverrides()">${t('Salva config campi mancanti')}</button>`
+    +(LAST_KITDRY.cols.length?` <button class="btn ghost small" onclick="kitDryFromReport()">${t('Proponi regole YAML')}</button>`:'')
+    +`<span class="hint" id="fov-status"></span></div>`;
+}
+async function saveFieldOverrides(){
+  const overrides={};document.querySelectorAll('.fov-select').forEach(sel=>{overrides[sel.dataset.field]={action:sel.value,kind:sel.value==='mask'?'opaque':null};});
+  const st=$('fov-status');if(st)st.textContent=t('salvataggio…');
+  try{
+    const j=await request('/api/field-overrides',{method:'POST',body:{overrides}});
+    FIELD_OVERRIDES=j.overrides||{};
+    if(st)st.textContent=t('salvato — riesegui per applicare (')+`${j.count}${t(' campi configurati)')}`;
+  }catch(e){if(st){st.textContent=t('Salvataggio fallito: ')+e.message;st.classList.add('err-inline');}}
+}
+function kitDryFromReport(){if(!LAST_KITDRY.cols.length)return;$('kitdry-in').value=LAST_KITDRY.cols.join(', ');$('kitdry-family').value=LAST_KITDRY.kit||'';runKitDry();$('kitdry-card').scrollIntoView({behavior:'smooth'});}
+const DLP_ACTION_LABELS={pseudonymize:'pseudonimizza',redact:'elidi',block:'blocca output',keep:'mantieni'};
+async function loadDlpCategories(){const j=await request('/api/dlp-categories');$('dlp-controls').innerHTML=j.categories.map(c=>`<label class="dlp-item"><b>${esc(c.label)}</b><select class="dlp-select" data-category="${esc(c.id)}">${j.actions.map(a=>`<option value="${esc(a)}" ${a===c.default?'selected':''}>${esc(DLP_ACTION_LABELS[a]||a)}</option>`).join('')}</select><small>${esc(c.description)}</small></label>`).join('');}
+function collectDlpPolicy(){const out={};document.querySelectorAll('.dlp-select').forEach(s=>out[s.dataset.category]=s.value);return out;}
+// Single source of truth for anonymize options (shared by single/batch/session flows).
+async function runPdfUpload(){
+  hideErr(); const f=$('file-pdf').files[0], st=$('pdf-status');
+  if(!f){showErr(t('Seleziona un file PDF'),'pdf-status');return;}
+  const b=$('go-pdf'); b.disabled=true; st.classList.remove('err-inline'); st.textContent=t('elaborazione\u2026');
+  try{
+    const fd=new FormData();
+    fd.append('file',await stableCopy(f)); fd.append('tenant',tenantValue());
+    fd.append('output',$('pdf-output').value);
+    fd.append('ip_mode',$('pdf-ipmode').value); fd.append('url_mode',$('pdf-urlmode').value);
+    fd.append('mask_tenant_networks',$('tenantnet').checked?'true':'false');
+    const res=await fetch('/api/anonymize-pdf',{method:'POST',headers:{'X-CSRF-Token':decodeURIComponent(cookie('logmask_csrf'))},body:fd});
+    const j=await res.json().catch(()=>({error:t('risposta non valida dal backend')}));
+    if(!res.ok) throw new Error(j.detail||j.error||('errore '+res.status));
+    if(j.output==='text'){ triggerDownload(new Blob([j.output_text],{type:'text/plain;charset=utf-8'}), j.filename); }
+    else { const bin=atob(j.document_b64); const buf=new Uint8Array(bin.length);
+      for(let i=0;i<bin.length;i++) buf[i]=bin.charCodeAt(i);
+      const url=URL.createObjectURL(new Blob([buf],{type:'application/pdf'}));
+      const link=document.createElement('a'); link.href=url; link.download=j.filename; link.click(); URL.revokeObjectURL(url); }
+    st.textContent=`${j.pages} ${t('pagine')} \u00b7 ${j.changed||0} ${t('valori mascherati')}`
+      +(j.metadata_scrubbed?` \u00b7 ${j.metadata_scrubbed} ${t('metadati')}`:'')
+      +(j.attachments_removed?` \u00b7 ${j.attachments_removed} ${t('allegati rimossi')}`:'');
+    if(j.warnings&&j.warnings.length) showErr(j.warnings.join(' '),'pdf-status');
+    await refreshVault();
+  }catch(e){ showErr(t('Anonimizzazione PDF fallita: ')+e.message,'pdf-status'); }
+  finally{ b.disabled=false; }
+}
+async function runPdfRestore(){
+  hideErr(); const f=$('file-pdf-restore').files[0], st=$('pdf-restore-status');
+  if(!f){showErr(t('Seleziona un file PDF'),'pdf-restore-status');return;}
+  st.classList.remove('err-inline'); st.textContent=t('elaborazione\u2026');
+  try{
+    const fd=new FormData(); fd.append('file',await stableCopy(f)); fd.append('tenant',tenantValue());
+    const res=await fetch('/api/deanonymize-pdf',{method:'POST',headers:{'X-CSRF-Token':decodeURIComponent(cookie('logmask_csrf'))},body:fd});
+    const j=await res.json().catch(()=>({error:t('risposta non valida dal backend')}));
+    if(!res.ok) throw new Error(j.detail||j.error||('errore '+res.status));
+    const bin=atob(j.document_b64); const buf=new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++) buf[i]=bin.charCodeAt(i);
+    const url=URL.createObjectURL(new Blob([buf],{type:'application/pdf'}));
+    const link=document.createElement('a'); link.href=url; link.download=j.filename; link.click(); URL.revokeObjectURL(url);
+    st.textContent=`${j.tokens_resolved}/${j.tokens_in} ${t('pseudonimi risolti')}`
+      +(j.tokens_unresolved?` \u00b7 ${j.tokens_unresolved} ${t('NON risolti')}`:'');
+  }catch(e){ showErr(t('Ripristino PDF fallito: ')+e.message,'pdf-restore-status'); }
+}
+async function runPstUpload(){
+  hideErr();const f=$('file-pst').files[0];if(!f){showErr(t('Seleziona un file .pst'));return;}
+  const b=$('go-pst');b.disabled=true;$('pst-status').classList.remove('err-inline');$('pst-status').textContent=t('Estrazione e anonimizzazione in corso...');
+  try{
+    const fd=new FormData();fd.append('file',await stableCopy(f));fd.append('tenant',tenantValue());fd.append('format',$('pst-fmt').value);fd.append('ip_mode',$('pst-ipmode').value);fd.append('url_mode',$('pst-urlmode').value);fd.append('mask_tenant_networks',$('tenantnet').checked?'true':'false');
+    const res=await fetch('/api/anonymize-pst',{method:'POST',headers:{'X-CSRF-Token':decodeURIComponent(cookie('logmask_csrf'))},body:fd});
+    if(!res.ok){const e=await res.json().catch(()=>({detail:res.statusText}));throw new Error(e.detail||e.error||('HTTP '+res.status));}
+    const j=await res.json();triggerDownload(new Blob([j.output],{type:'text/plain;charset=utf-8'}),j.filename||'mailbox.anon.'+j.format);
+    $('pst-status').textContent=j.messages+t(' messaggi anonimizzati - file scaricato.');await refreshVault();
+  }catch(e){showErr(t('Anonimizzazione PST fallita: ')+e.message,'pst-status');}
+  finally{b.disabled=false;}
+}
+function anonRequestBody(text,format,source){return {tenant:tenantValue(),text,format:format||$('fmt').value,safe_mode:$('safe').checked,preserve_subnet:$('subnet').checked,ip_mode:$('ip-mode').value,url_mode:$('url-mode').value,mask_tenant_networks:$('tenantnet').checked,catalog:$('catalog').value||null,source,workflow_profile:$('workflow-profile').value,dlp_policy:collectDlpPolicy()};}
+
+// ---- Sessioni di lavoro v0.10.11 (in memoria: nessun contenuto su disco) ----
+let SESSIONS=[],ACTIVE_SESSION=null,VIEWED_ITEM=null,SESS_SEQ=0,SESS_RUNNING=false;
+function activeSession(){return SESSIONS.find(s=>s.id===ACTIVE_SESSION)||null;}
+function newSession(){const n=SESSIONS.length+1;const s={id:++SESS_SEQ,name:`Sessione ${n}`,items:[]};SESSIONS.push(s);ACTIVE_SESSION=s.id;VIEWED_ITEM=null;renderSessions();}
+function closeSession(){if(!ACTIVE_SESSION)return;SESSIONS=SESSIONS.filter(s=>s.id!==ACTIVE_SESSION);ACTIVE_SESSION=SESSIONS.length?SESSIONS[SESSIONS.length-1].id:null;VIEWED_ITEM=null;renderSessions();}
+function renameSession(name){const s=activeSession();if(s){s.name=(name||'').trim()||s.name;renderSessions();}}
+function selectSession(id){ACTIVE_SESSION=id;VIEWED_ITEM=null;renderSessions();}
+function addPasteItem(){const s=activeSession();if(!s)return;const text=$('sess-paste').value;if(!text.trim()){showErr(t('Nessun testo da aggiungere alla sessione.'));return;}hideErr();const label=$('sess-item-name').value.trim();const seq=s.items.length+1;s.items.push({id:++SESS_SEQ,kind:'paste',name:label||`${t('incolla-')}${seq}`,format:detectFormatClient(text,''),text,result:null});$('sess-paste').value='';$('sess-item-name').value='';renderSessions();}
+async function addSessionFiles(files){const s=activeSession();if(!s){showErr(t('Crea prima una sessione.'));return;}const arr=[...(files||[])];if(!arr.length)return;hideErr();for(const f of arr){try{const it=await readTextFile(f);s.items.push({id:++SESS_SEQ,kind:'file',name:it.name,format:it.format,size:it.size,text:it.text,result:null});}catch(e){showErr('File '+f.name+': '+e.message);}}renderSessions();}
+function removeItem(id,ev){if(ev)ev.stopPropagation();const s=activeSession();if(!s)return;s.items=s.items.filter(i=>i.id!==id);if(VIEWED_ITEM===id)VIEWED_ITEM=null;renderSessions();}
+async function processSession(){const s=activeSession();if(!s||!s.items.length){showErr(t('Sessione vuota.'));return;}hideErr();const b=$('sess-run');b.disabled=true;SESS_RUNNING=true;renderSessions();
+  for(const it of s.items){if(it.result&&it.result.ok&&!it.result.blocked)continue;it.result=null;renderSessions();
+    try{const j=await request('/api/anonymize',{method:'POST',body:anonRequestBody(it.text,it.format,'session:'+it.kind)});it.result={done:true,ok:true,blocked:!!j.blocked,output:j.output,report:j};}
+    catch(e){it.result={done:true,ok:false,error:e.message};}renderSessions();}
+  SESS_RUNNING=false;b.disabled=false;const ok=s.items.filter(i=>i.result&&i.result.ok&&!i.result.blocked),bad=s.items.filter(i=>i.result&&(!i.result.ok||i.result.blocked));
+  addHistory('sessione',{tenant:tenantValue(),format:'sessione:'+s.name,blocked:bad.length>0,elided:ok.reduce((a,i)=>a+(i.result.report?.elided||0),0),failed:bad.length});
+  renderSessions();await refreshVault();}
+function viewItem(id){VIEWED_ITEM=id;renderSessionViewer();renderSessionItems();}
+function sessOkResults(s){return (s?.items||[]).filter(i=>i.result&&i.result.ok&&!i.result.blocked&&i.result.output);}
+function renderSessions(){
+  const tabs=$('sess-tabs');
+  tabs.innerHTML=SESSIONS.map(s=>{const ok=sessOkResults(s).length,bad=s.items.filter(i=>i.result&&(!i.result.ok||i.result.blocked)).length,run=SESS_RUNNING&&s.id===ACTIVE_SESSION;const dot=run?'run':bad?'bad':ok&&ok===s.items.length&&s.items.length?'ok':'';return `<span class="sess-tab ${s.id===ACTIVE_SESSION?'on':''}" onclick="selectSession(${s.id})"><span class="dot ${dot}"></span>${esc(s.name)} · ${s.items.length}</span>`;}).join('');
+  const s=activeSession();
+  $('sess-empty').style.display=SESSIONS.length?'none':'';
+  $('sess-body').style.display=s?'':'none';
+  if(!s){renderSessionViewer();return;}
+  $('sess-name').value=s.name;
+  const ok=sessOkResults(s).length;$('sess-count').textContent=`${s.items.length} voci · ${ok} pronte`;
+  $('sess-zip').disabled=ok<1;$('sess-run').disabled=SESS_RUNNING||!s.items.length;
+  renderSessionItems();renderSessionViewer();
+}
+function renderSessionItems(){
+  const s=activeSession(),box=$('sess-items');if(!s){box.innerHTML='';return;}
+  if(!s.items.length){box.innerHTML='<span class="hint">Nessuna voce: incolla un log e premi «Aggiungi voce», oppure «Aggiungi file».</span>';return;}
+  box.innerHTML=`<table><thead><tr><th>#</th><th>voce</th><th>tipo</th><th>formato</th><th>stato</th><th></th></tr></thead><tbody>${s.items.map((it,i)=>{const r=it.result||{};const cls=r.error||r.blocked?'sess-st-bad':r.ok?'sess-st-ok':(SESS_RUNNING?'sess-st-run':'sess-st-pending');const st=r.error?'errore':r.blocked?'bloccato':r.ok?'ok':(SESS_RUNNING?'in corso':'pronto');const viewable=r.ok&&!r.blocked;return `<tr class="${viewable?'viewable':''} ${it.id===VIEWED_ITEM?'on':''}" ${viewable?`onclick="viewItem(${it.id})"`:''}><td>${i+1}</td><td>${esc(it.name)}</td><td>${it.kind}</td><td>${esc((it.format||'auto').toUpperCase())}</td><td class="${cls}">${st}</td><td><span class="sess-rm" title="Rimuovi" onclick="removeItem(${it.id},event)">✕</span></td></tr>`;}).join('')}</tbody></table>`;
+}
+function renderSessionViewer(){
+  const s=activeSession(),it=s&&s.items.find(i=>i.id===VIEWED_ITEM);const v=$('sess-viewer');
+  if(!it||!it.result||!it.result.ok){v.style.display='none';return;}
+  v.style.display='';$('sess-view-name').textContent=it.name;$('sess-view-out').value=it.result.output||'';
+  const j=it.result.report||{},cov=j.coverage||{};
+  const chips=[`formato ${esc(j.format||it.format||'auto')}`,`kit ${esc(j.vendor_kit?.label||j.catalog||'generico')}`];
+  if(cov.vendor_percent!==undefined)chips.push(`copertura ${cov.vendor_percent}%`);
+  if(j.elided)chips.push(`elisi ${j.elided}`);
+  if(cov.unknown_total)chips.push(`<span class="chip bad">fuori kit ${cov.unknown_total}</span>`);
+  $('sess-view-report').innerHTML=chips.map(c=>c.startsWith('<')?c:`<span class="chip">${c}</span>`).join('');
+}
+function downloadSessionZip(){const s=activeSession();if(!s)return;const ok=sessOkResults(s);if(!ok.length)return;
+  if(ok.length===1){const it=ok[0];const blob=new Blob([it.result.output],{type:'text/plain;charset=utf-8'});triggerDownload(blob,outputFileNameFor(it.name,'anon'));return;}
+  const blob=zipBlob(ok.map(it=>({name:outputFileNameFor(it.name,'anon'),text:it.result.output})));
+  triggerDownload(blob,safeFileName(`${workflowPrefix()}-${s.name}`)+'.zip');}
+function downloadViewedItem(){const s=activeSession(),it=s&&s.items.find(i=>i.id===VIEWED_ITEM);if(!it||!it.result?.output)return;triggerDownload(new Blob([it.result.output],{type:'text/plain;charset=utf-8'}),outputFileNameFor(it.name,'anon'));}
+function triggerDownload(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+
+async function loadTenants(){const j=await request('/api/tenants');$('tenant-list').innerHTML=(j.tenants||[]).map(t=>`<option value="${esc(t)}"></option>`).join('');let saved=localStorage.getItem('logmask-tenant');if(saved&&(j.tenants||[]).includes(saved))$('tenant').value=saved;else if(j.default)$('tenant').value=j.default;else if(j.tenants?.length)$('tenant').value=j.tenants[0];}
+async function refreshVault(){if(!ME?.permissions.includes('reports')){$('vaultchip').textContent='vault: accesso operativo';return;}let t;try{t=tenantValue();}catch(_){$('vaultchip').textContent='vault: seleziona tenant';return;}try{const j=await request('/api/stats?tenant='+encodeURIComponent(t));$('vaultchip').textContent=t+': '+j.kinds.reduce((a,k)=>a+k.entries,0)+' entità';}catch(_){$('vaultchip').textContent=t+': non disponibile';}}
+function tenantList(v){return v.split(',').map(x=>x.trim().toLowerCase()).filter(Boolean);}
+async function createUser(){try{await request('/api/admin/users',{method:'POST',body:{username:$('new-user').value,password:$('new-password').value,role:$('new-role').value,tenants:tenantList($('new-tenants').value)}});$('new-user').value=$('new-password').value=$('new-tenants').value='';await loadUsers();await loadAudit();}catch(e){showErr('Creazione utente: '+e.message);}}
+async function loadUsers(){const j=await request('/api/admin/users');$('users-wrap').innerHTML=`<table><thead><tr><th>utente</th><th>ruolo</th><th>tenant</th><th>attivo</th><th></th></tr></thead><tbody>${j.users.map(u=>`<tr><td>${esc(u.username)}${u.must_change_password?' *':''}</td><td><select id="role-${u.id}">${j.roles.map(r=>`<option ${r===u.role?'selected':''}>${r}</option>`).join('')}</select></td><td><input id="ten-${u.id}" value="${esc(u.tenants.filter(t=>t!=='*').join(','))}" ${u.role==='admin'?'disabled':''}></td><td><input id="act-${u.id}" type="checkbox" ${u.active?'checked':''}></td><td><button class="btn small" onclick="saveUser(${u.id})">Salva</button></td></tr>`).join('')}</tbody></table>`;}
+async function saveUser(id){try{await request('/api/admin/users/'+id,{method:'PATCH',body:{role:$('role-'+id).value,tenants:tenantList($('ten-'+id).value),active:$('act-'+id).checked}});await loadUsers();await loadAudit();}catch(e){showErr('Aggiornamento utente: '+e.message);}}
+async function loadAudit(){const j=await request('/api/admin/audit?limit=200');$('audit-wrap').innerHTML=`<table><thead><tr><th>data</th><th>utente</th><th>azione</th><th>tenant</th><th>IP</th><th>esito</th><th>dettagli</th></tr></thead><tbody>${j.events.map(e=>`<tr><td>${new Date(e.ts*1000).toLocaleString()}</td><td>${esc(e.username||'—')}</td><td>${esc(e.action)}</td><td>${esc(e.tenant||'—')}</td><td>${esc(e.ip)}</td><td class="${e.success?'status-ok':'status-bad'}">${e.success?'OK':'KO'}</td><td>${esc(JSON.stringify(e.details))}</td></tr>`).join('')}</tbody></table>`;}
+bindFileLoader('anon');bindFileLoader('deanon');syncIpMode();
+$('sess-files').addEventListener('change',async e=>{try{await addSessionFiles(e.target.files);}catch(x){showErr('Caricamento file: '+x.message);}finally{e.target.value='';}});
+(async()=>{try{ME=await request('/api/me');if(ME.must_change_password)showPassword();else await showApp();}catch(_){showLogin();}})();
+</script>
+</body>
+</html>

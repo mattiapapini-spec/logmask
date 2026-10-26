@@ -1,0 +1,26 @@
+id: proofpoint
+label: Proofpoint TAP (SIEM / Smart Search)
+version: 2026.07.1
+aliases: [tap, proofpoint_tap]
+fingerprints:
+- {pattern: '^phishscore$', weight: 8}
+- {pattern: '^spamscore$', weight: 5}
+- {pattern: '^headerfrom$', weight: 5}
+- {pattern: '^quarantinefolder$', weight: 5}
+- {pattern: '^threattype$', weight: 4}
+- {pattern: '^senderip$', weight: 4}
+- {pattern: '^messageid$', weight: 2}
+rules:
+- {pattern: '^(sender|recipient|recipients|fromaddress|toaddresses|ccaddresses|bccaddresses|headerfrom|headerto|replytoaddress|xoriginalfrom|envelopefrom|envelopercpt)$', action: mask, kind: email}
+# v0.27.2: oltre agli indirizzi, un export Proofpoint puo' portare l'account
+# nudo del destinatario e l'host del relay di posta. Difensivi, a basso rischio
+# di falsi positivi.
+- {pattern: '^(user|username|recipient_?user|sender_?user|ruser|suser)$', action: mask, kind: user}
+- {pattern: '^(hostname|host|relay|mailhost|mta|smtp_?host|server_?name)$', action: mask, kind: fqdn}
+- {pattern: '^(senderip|clientip|src_?ip|relayip|connectip)$', action: mask, kind: ip}
+- {pattern: '^(guid|messageid|clusterid|campaignid|messageparts.*\.oContentdisposition)$', action: mask, kind: opaque}
+- {pattern: '^subject$', action: text}
+- {pattern: '^(urls?|threat(url|name|id)?|.*sha256|.*md5|attachment(names?)?|filename.*|messageparts.*)$', action: keep}
+- {pattern: '^(threattype|threatstatus|classification|.*score|quarantine(folder|rule)|policyroutes?|messagetime|.*_time|modulesrun|completelyrewritten|xmailer)$', action: keep}
+header_hints: [sender, recipient, phishScore]
+notes: TAP SIEM API / Smart Search. Mittenti e destinatari sono e-mail (dominio costante per cliente); URL, hash e allegati sono IOC (keep).

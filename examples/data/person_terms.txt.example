@@ -1,0 +1,12 @@
+# LogMask - persone REALI del cliente (config runtime).
+# Copia in data/person_terms.txt. Un nome o cognome per riga; commenti (#).
+#
+# A DIFFERENZA delle liste generiche in persons/, i termini elencati qui
+# vengono mascherati anche da SOLI (token singolo), perche' sono persone che
+# esistono davvero in quel tenant. E' la lista piu' precisa: popolala una volta
+# dall'export AD/Entra del cliente. Si somma a LOGMASK_PERSON_TERMS.
+#
+# Attenzione: NON metterci cognomi che coincidono con parole comuni usate nei
+# log di quel cliente, altrimenti il testo tecnico viene alterato.
+Verdi
+Kowalski

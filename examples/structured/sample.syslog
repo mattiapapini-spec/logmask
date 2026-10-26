@@ -1,0 +1,2 @@
+<134>Jul 12 10:00:00 fw01 vpn: src=192.168.10.25 user="mrossi" action=login severity=high
+<134>Jul 12 10:00:01 fw02 vpn: src=192.168.10.26 user="lbianchi" action=logout severity=low

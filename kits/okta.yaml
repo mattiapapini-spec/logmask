@@ -1,0 +1,26 @@
+id: okta
+label: Okta (System Log)
+version: 2026.07.1
+aliases: [okta_syslog, okta_system_log]
+fingerprints:
+- {pattern: '^actor\.alternateid$', weight: 8}
+- {pattern: '^outcome\.result$', weight: 5}
+- {pattern: '^client\.ipaddress$', weight: 5}
+- {pattern: '^displaymessage$', weight: 4}
+- {pattern: '^eventtype$', weight: 3}
+- {pattern: '^authenticationcontext\..*$', weight: 4}
+- {pattern: '^debugcontext\..*$', weight: 4}
+rules:
+- {pattern: '^(actor|target(\[\d+\])?)\.alternateid$', action: mask, kind: email}
+- {pattern: '^(actor|target(\[\d+\])?)\.displayname$', action: mask, kind: user}
+- {pattern: '^(actor|target(\[\d+\])?)\.(id|type)$', action: mask, kind: opaque}
+- {pattern: '^client\.ipaddress$', action: mask, kind: ip}
+- {pattern: '^request\.ipchain.*$', action: text}
+- {pattern: '^client\.geographicalcontext\.(city|postalcode|geolocation.*)$', action: mask, kind: opaque}
+- {pattern: '^client\.geographicalcontext\.(country|state)$', action: keep}
+- {pattern: '^(uuid|transaction\.id|authenticationcontext\.externalsessionid|securitycontext\..*)$', action: mask, kind: opaque}
+- {pattern: '^(client\.useragent\..*|client\.(device|zone))$', action: keep}
+- {pattern: '^(displaymessage|outcome\.reason)$', action: text}
+- {pattern: '^(eventtype|legacyeventtype|published|severity|version|outcome\.result|transaction\.type|authenticationcontext\.(authenticationstep|credentialtype|credentialprovider)|debugcontext\..*)$', action: keep}
+header_hints: [actor.alternateId, eventType, outcome.result]
+notes: Export del System Log (campi annidati con punto). alternateId e' l'e-mail (dominio costante per cliente); citta'/geo mascherate, paese in chiaro.

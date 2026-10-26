@@ -1,0 +1,14 @@
+# LogMask - nomi cliente da mascherare SEMPRE (config runtime).
+# Copia questo file in data/client_terms.txt (la cartella data/ e' in
+# .gitignore: i nomi reali non finiscono mai nel repo ne' nelle release).
+#
+# Formato: un nome per riga; righe vuote e commenti (#) ignorati.
+# Il match ignora maiuscole e separatori: "Acme Calcio", "AcmeCalcio" e
+# "acme-calcio" diventano lo stesso token CLIENT-xxxxxx (irreversibile,
+# distinto per cliente, stabile per tenant). Si somma a LOGMASK_CLIENT_TERMS.
+# Modalita' alternativa via LOGMASK_CLIENT_TERM_MODE: pseudonymize|elide|label.
+ClienteAlfa
+ClienteBeta
+ClienteGamma
+Acme Calcio
+Ente Esempio

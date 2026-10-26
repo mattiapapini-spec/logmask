@@ -1,0 +1,46 @@
+id: sentinelone
+label: SentinelOne Singularity
+version: '2026.07'
+aliases:
+- s1
+- singularity
+fingerprints:
+- pattern: ^agentcomputername$
+  weight: 5
+- pattern: ^agentuuid$
+  weight: 4
+- pattern: ^storylineid$
+  weight: 5
+- pattern: ^siteid$
+  weight: 2
+- pattern: ^threatid$
+  weight: 3
+rules:
+- pattern: ^(agentcomputername|computername|hostname|endpointname)$
+  action: mask
+  kind: endpoint
+- pattern: ^(agentip|externalip|localip|srcip|dstip|sourceip|destinationip)$
+  action: mask
+  kind: ip
+- pattern: ^(username|accountname|user|srcuser|dstuser)$
+  action: mask
+  kind: user
+- pattern: ^(domainname|logondomain)$
+  action: mask
+  kind: windomain
+- pattern: ^(usersid|accountsid)$
+  action: mask
+  kind: sid
+- pattern: ^(commandline|processcommandline|filepath|file_path|parentcommandline|url|dnsrequest|message|description)$
+  action: text
+- pattern: ^(agentuuid|agentid|siteid|groupid|tenantid|storylineid|threatid)$
+  action: mask
+  kind: opaque
+- pattern: ^(eventtime|createdat|updatedat|eventtype|eventname|severity|confidencelevel|classification|mitigationstatus|processid|parentprocessid)$
+  action: keep
+- pattern: ^(sha1|sha256|md5|filehash)$
+  action: keep
+header_hints:
+- sentinelone
+- singularity
+notes: ''

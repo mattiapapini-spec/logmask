@@ -1,0 +1,52 @@
+id: darktrace
+label: Darktrace
+version: '2026.08'
+aliases:
+- darktrace
+# v0.25.2: compatibilita' con il vecchio id unico, cosi' un catalogo forzato
+# o una policy salvata che lo nominava continua a funzionare.
+- darktrace_exabeam
+fingerprints:
+- pattern: ^modelname$
+  weight: 5
+- pattern: ^breachscore$
+  weight: 5
+- pattern: ^modeluuid$
+  weight: 4
+- pattern: ^(devicehostname|devicelabel)$
+  weight: 4
+- pattern: ^deviceid$
+  weight: 3
+- pattern: ^pbid$
+  weight: 3
+rules:
+- pattern: ^(devicehostname|hostname|devicename|devicelabel|sourcehost|destinationhost|src_host|dst_host)$
+  action: mask
+  kind: endpoint
+- pattern: ^(sourceip|destinationip|srcip|dstip|src_ip|dst_ip|clientip|serverip|ip)$
+  action: mask
+  kind: ip
+- pattern: ^(devicemac|sourcemac|destinationmac|mac)$
+  action: mask
+  kind: mac
+- pattern: ^(username|user|credentials|account|principal|src_user|dst_user)$
+  action: mask
+  kind: user
+- pattern: ^(email|useremail|sender|recipient)$
+  action: mask
+  kind: email
+- pattern: ^(message|description|details|comment|commandline|rawlog|raw_event|triggeredcomponents)$
+  action: text
+- pattern: ^(url|uri|hostname_uri|link)$
+  action: text
+- pattern: ^(deviceid|modeluuid|tenantid|customerid|rule_id|session_id|pbid|subnetid)$
+  action: mask
+  kind: opaque
+- pattern: ^(modelname|breachscore|score|severity|priority|event_type|timestamp|created_at|time|protocol|port|sourceport|destinationport|direction|action)$
+  action: keep
+header_hints:
+- darktrace
+notes: >-
+  Darktrace model breaches ed export della Threat Visualizer. Fino alla
+  v0.25.1 condivideva un unico kit con Exabeam: i fingerprint erano quasi tutti
+  Darktrace, quindi un export Exabeam non faceva scattare il riconoscimento.

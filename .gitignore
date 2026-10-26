@@ -1,0 +1,78 @@
+# v0.27.7: WHITELIST. Nel repo vanno solo codice, documentazione e fixture
+# sintetiche. Tutto il resto e' ignorato per default: un file nuovo (export,
+# vault, chiave, zip, appunti) resta fuori finche' non lo si ammette qui.
+
+# --- radice: solo i file del progetto ---
+/*
+!/.gitignore
+!/.dockerignore
+!/.env.example
+!/*.py
+!/*.md
+!/LICENSE
+!/VERSION
+!/Dockerfile
+!/docker-compose*.yml
+!/requirements.txt
+!/pyproject.toml
+!/docs/
+!/examples/
+!/kits/
+!/persons/
+!/static/
+!/tests/
+
+# --- cartelle con un solo tipo di file ---
+/kits/*
+!/kits/*.yaml
+/persons/*
+!/persons/*.txt
+/tests/*
+!/tests/*.py
+
+# --- runtime data e segreti: mai, nemmeno nelle cartelle ammesse ---
+data/
+!/examples/data/
+.env
+.env.*
+!/.env.example
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+*.key
+*.pem
+*.p12
+*.pfx
+bootstrap-admin.txt
+field_overrides.json
+*_terms.txt
+tenant_networks.txt
+keep_fields.txt
+
+# --- export e documenti reali: le fixture stanno in examples/ e sono sintetiche ---
+*.pst
+*.ost
+*.eml
+*.msg
+*.evtx
+*.pcap
+*.pcapng
+*.docx
+*.xlsx
+
+# --- artefatti di build e file temporanei ---
+*.zip
+*.tar
+*.tar.gz
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+.venv/
+venv/
+dist/
+build/
+*.tmp
+*.bak
+.fuse_hidden*

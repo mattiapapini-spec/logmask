@@ -1,0 +1,143 @@
+id: microsoft_defender
+label: Microsoft Defender XDR / Entra ID / M365
+version: 2026.07.3
+aliases:
+- m365
+- defender
+- entra
+- azuread
+- mdatp
+fingerprints:
+- pattern: ^devicename$
+  weight: 4
+- pattern: ^actiontype$
+  weight: 3
+- pattern: ^initiatingprocessaccountupn$
+  weight: 5
+- pattern: ^remoteip$
+  weight: 4
+- pattern: ^localip$
+  weight: 4
+- pattern: ^accountupn$
+  weight: 4
+- pattern: ^userprincipalname$
+  weight: 4
+- pattern: ^clientip$
+  weight: 3
+- pattern: ^recordtype$
+  weight: 2
+- pattern: ^impacted_assets$
+  weight: 5
+- pattern: ^investigation_state$
+  weight: 4
+- pattern: ^detection_source$
+  weight: 4
+- pattern: ^incident_name$
+  weight: 4
+- pattern: ^service_sources$
+  weight: 4
+- pattern: ^first_activity$
+  weight: 3
+- pattern: ^asset_interessati$
+  weight: 5
+- pattern: ^stato_indagine$
+  weight: 4
+- pattern: ^origine_rilevamento$
+  weight: 4
+- pattern: ^origini_di_rilevamento$
+  weight: 4
+- pattern: ^nome_evento_imprevisto$
+  weight: 5
+- pattern: ^prima_attività$
+  weight: 3
+- pattern: ^utenti_interessati$
+  weight: 4
+- pattern: ^operation$
+  weight: 2
+- pattern: ^alertid$
+  weight: 2
+- pattern: ^servicesource$
+  weight: 3
+rules:
+- pattern: ^(impacted_assets|asset_interessati|impacted_users|utenti_interessati|devices|dispositivi_interessati|mailboxes|cassette_postali_interessate)$
+  action: text
+- pattern: ^(incident_name|nome_evento_imprevisto|title|titolo|alert_name|nome_avviso)$
+  action: text
+- pattern: ^(assigned_to|assegnato_a)$
+  action: mask
+  kind: email
+- pattern: ^(device_groups|gruppi_di_dispositivi)$
+  action: mask
+  kind: opaque
+- pattern: ^(incident_id|alert_id|id_avviso|id_evento_imprevisto)$
+  action: mask
+  kind: opaque
+- pattern: ^(severity|gravità|status|stato|categor(y|ies|ia|ie)|investigation_state|stato_indagine|detection_sources?|origin[ei]_(di_)?rilevamento|service_sources?|origini_servizio|classification|classificazione|determination|determinazione|tags?|data_sensitivity|riservatezza_dei_dati|active_alerts|avvisi_attivi|first_activity|prima_attività|last_activity|ultima_attività|resolved_time|created_time)$
+  action: keep
+- pattern: ^(last_?external_?ip(_?address)?|external_?ip(_?address)?|public_?ip(_?address)?)$
+  action: mask
+  kind: ip_strict
+- pattern: ^(devicename|machinename|computer(name)?|host_?name|device_?dns_?name)$
+  action: mask
+  kind: endpoint
+- pattern: ^(dns_?domain|nt_?domain)$
+  action: mask
+  kind: windomain
+- pattern: ^(workspace_?name)$
+  action: mask
+  kind: opaque
+- pattern: ^(system_?alert_?id|mde_?device_?id|detector_?id|alert_?type|azure_?ad_?device_?id|analytics_?template_?id|alert_?policy_?id|correlation_?id|provider_?alert_?id)$
+  action: mask
+  kind: opaque
+- pattern: ^(remote|local|source|destination|client|actor|sender|recipient)ip(address)?$
+  action: mask
+  kind: ip
+- pattern: .*remote(session)?ip$
+  action: mask
+  kind: ip
+- pattern: ^(remoteurl|networkmessageremoteurl|url|domainname|dnsquery)$
+  action: text
+  kind: ioc
+- pattern: ^(account|initiatingprocessaccount|targetaccount|requestaccount)(name)$
+  action: mask
+  kind: user
+- pattern: .*(accountupn|userprincipalname|upn|senderfromaddress|recipientemailaddress)$
+  action: mask
+  kind: email
+- pattern: .*accountdomain$
+  action: mask
+  kind: windomain
+- pattern: .*accountsid$
+  action: mask
+  kind: sid
+- pattern: ^(userids?|userkey|user_id|identity|actor|targetuserorGroupname)$
+  action: mask
+  kind: user
+- pattern: ^(clientip|client_ip_address|actoripaddress|ip_address)$
+  action: mask
+  kind: ip
+- pattern: ^(processcommandline|initiatingprocesscommandline|commandline|folderpath|initiatingprocessfolderpath|filepath|registrykey|registryvalueData)$
+  action: text
+- pattern: ^(auditdata|additionalfields|extendedproperties|parameters|modifiedproperties|objectid|item|message|description)$
+  action: text
+- pattern: ^(deviceid|accountobjectid|initiatingprocessaccountobjectid|appguardcontainerid|tenantid|aadtenantid|subscriptionid|alertid|reportid|logonid)$
+  action: mask
+  kind: opaque
+- pattern: ^(timestamp|creationtime|processcreationtime|initiatingprocesscreationtime|lastseen|firstseen)$
+  action: keep
+- pattern: ^(actiontype|category|severity|servicesource|detectionsource|attacktechniques|operation|workload|resulttype|resultstatus|status|protocol|localiptype|remoteiptype)$
+  action: keep
+- pattern: ^(recordtype|processid|initiatingprocessid|localport|remoteport|filesize)$
+  action: keep
+- pattern: ^(sha1|sha256|md5|initiatingprocesssha1|initiatingprocesssha256|initiatingprocessmd5)$
+  action: keep
+- pattern: ^(filename|initiatingprocessfilename|processversioninfo.*|initiatingprocessversioninfo.*)$
+  action: keep
+header_hints:
+- microsoft defender
+- defender xdr
+- azure ad
+- entra
+- office 365
+- m365
+notes: Advanced Hunting, Entra sign-ins, M365 audit e export del portale (code avvisi/incidenti) con intestazioni italiane e inglesi.

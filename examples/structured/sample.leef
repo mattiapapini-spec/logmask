@@ -1,0 +1,2 @@
+LEEF:1.0|Fortinet|FortiGate|7.4|1001|src=192.168.10.25	usrName=mrossi	hostname=fw-01.example.com	sev=5
+LEEF:2.0|Vendor|Product|1.0|1002|^|src=192.168.10.26^usrName=lbianchi^hostname=fw-02.example.com^sev=3

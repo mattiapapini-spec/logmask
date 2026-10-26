@@ -1,0 +1,184 @@
+id: exabeam
+label: Exabeam (New-Scale CIM 2.0 / Advanced Analytics / Data Lake)
+version: '2026.08.2'
+aliases:
+- exabeam
+- newscale
+- new-scale
+- cim
+- advanced_analytics
+- datalake
+- data_lake
+fingerprints:
+# Campi verificati sul repository ufficiale ExabeamLabs/CIMLibrary
+# (Fields_Descriptions.md, 1165 campi): non esistono in altri prodotti.
+- pattern: ^dest_user_entity_id$
+  weight: 5
+- pattern: ^(dest|source)_device_entity_id$
+  weight: 5
+- pattern: ^dest_dns_hostname$
+  weight: 4
+- pattern: ^(dest|src)_user_(sid|dn|ou|arn)$
+  weight: 4
+- pattern: ^(dest|src)_process_command_line$
+  weight: 4
+- pattern: ^(dest|src)_translated_ipnum$
+  weight: 4
+- pattern: ^connection_uid$
+  weight: 4
+- pattern: ^(user_threat_(level|certainty)|user_privilege_(level|category))$
+  weight: 4
+- pattern: ^activity_type$
+  weight: 3
+- pattern: ^(approx_?log_?time|occured_time)$
+  weight: 4
+- pattern: ^m_(exa_rsc_|exa_sc_|winlog_)
+  weight: 5
+- pattern: ^m_[a-z0-9_]+$
+  weight: 3
+# Advanced Analytics / Data Lake (generazioni precedenti)
+- pattern: ^triggered_rules$
+  weight: 5
+- pattern: ^(risk_score|session_risk_score)$
+  weight: 3
+- pattern: ^(session_id|session_order)$
+  weight: 2
+- pattern: ^(exa_.*|_exabeam_.*)$
+  weight: 5
+- pattern: ^(is_ransomware|rawlogfields|raw_log_fields)$
+  weight: 4
+rules:
+# ====================== metadati m_* (nomi verificati in MetaFieldsMappings)
+# Vengono prima di tutto: alcuni m_* portano identita' vere e un "m_* -> testo"
+# generico lascerebbe in chiaro un nome utente isolato.
+- pattern: ^m_winlog_user_(name|type)$
+  action: mask
+  kind: user
+- pattern: ^m_winlog_user_identifier$
+  action: mask
+  kind: user
+- pattern: ^m_winlog_user_domain$
+  action: mask
+  kind: windomain
+- pattern: ^m_(host|hostname|computer_name|agent_hostname|winlog_computer_name|exa_rsc_hostname|exa_sc_hostname|destination|forwarder|source_name)$
+  action: mask
+  kind: endpoint
+- pattern: ^m_(message|event_original|event_data_.*|winlog_event_data_.*|log_file_path|path|dproc)$
+  action: text
+- pattern: ^m_[a-z0-9_]+$
+  action: keep
+# =========================================================== identita' utente
+- pattern: ^(dest|src|source|target)_user_(sid|dn|ou|entity_id|arn|id|full_name|type)$
+  action: mask
+  kind: user
+- pattern: ^(dest|src|source|target)_(user|domain_user_name|local_user_name|email_user)$
+  action: mask
+  kind: user
+- pattern: ^user_(sid|dn|ou|id|uid|uids|upn|arn|type|url|info)$
+  action: mask
+  kind: user
+- pattern: ^(user|users|account|account_name|account_id|account_user_name|domain_user_name|local_user_name|local_user_id|fallback_user_name|new_user_name|old_user_name|original_user|owned_user|operator_name|linked_service_account|db_user|database_user_name|aws_user|aws_account|storage_account|admin_id|principal_id|principal_name|item_creator|meeting_host_id|creator|owner|owner_id|file_owner|process_owner|member|member_id|members|added_member|added_users|removed_member|removed_users|allowed_users|denied_users|collaborators|identities|contact_id|sid_history|subject_sid)$
+  action: mask
+  kind: user
+- pattern: ^(full_name|first_name|last_name|employee_id|employee_title|employee_status|department|manager|manager_name)$
+  action: mask
+  kind: user
+# ==================================================================== e-mail
+- pattern: ^(email_address|email_id|email_user|email_recipients|mailfrom|email_dlp_from|external_address|manager_email|aws_email_address|cc|bcc|dest_email|dest_email_address|src_email_address|sender|recipient|recipients)$
+  action: mask
+  kind: email
+- pattern: ^(email_domain|dest_email_domain|src_email_domain|added_member_domain)$
+  action: mask
+  kind: fqdn
+# ================================================================== macchine
+- pattern: ^(dest|src|source|target)_(dns_hostname|host|local_host|translated_host|device_entity_id|fqdn|host_type|site_name)$
+  action: mask
+  kind: endpoint
+- pattern: ^(host|hostname|computer_name|device|device_name|device_id|new_host|local_asset|asset_id|edge_host|bucket_host|auth_server|domain_controller|quarantine_machine|virtual_station_name|vm_host_name|vm_pool_name|vm_template_name|server_name|sensor_name|mfa_device|gateway_station|volume_device|host_zen_code|src_zen_code)$
+  action: mask
+  kind: endpoint
+# ================================================================== rete
+- pattern: ^(dest|src)_(ip|ipv6|external_ip|translated_ip|translated_ipnum)$
+  action: mask
+  kind: ip
+- pattern: ^(host_ip|device_ip|assigned_ip|dhcp_ip|new_ip|origin_ip|last_known_ip|private_ip|proxy_ip|nas_ip_address|framed_addr)$
+  action: mask
+  kind: ip
+- pattern: ^(dest_mac|src_mac|calling_station_id)$
+  action: mask
+  kind: mac
+# "md5 dell'IP e del nome utente" secondo la documentazione CIM: pseudonimo,
+# ma ricalcolabile da chi conosce i valori, quindi resta un identificativo.
+- pattern: ^connection_uid$
+  action: mask
+  kind: opaque
+# =========================================================== dominio e gruppi
+- pattern: ^(domain|nt_domain|realm|account_domain|db_domain|group_domain|external_domain|sub_domain|top_domain|dest_domain|src_domain|target_domain|sid_domain)$
+  action: mask
+  kind: windomain
+- pattern: ^(group_name|group_ou|group_arn|group_id|group_info|access_group|app_group|server_group|resource_group|security_group|blocking_group_name|identity_group|user_group_name|src_group_name|dest_group|door_group_name|auth_dn|object_dn|object_ou|ds_object_dn|ds_object_name|ds_object_ou|ds_object_out|src_ds_object_dn|src_ds_object_name|src_ds_object_ou|user_ou|role_name|removed_role_name|src_role)$
+  action: mask
+  kind: opaque
+- pattern: ^(zone|zone_id|src_zone|dest_zone|local_zone|src_local_zone|dest_local_zone|src_zone_name|src_network_zone|dest_network_zone|egress_zone|ingress_zone|egress_security_zone|ingress_security_zone|volume_zone|availabilty_zone|src_network|network)$
+  action: mask
+  kind: opaque
+# =================================================================== web/DNS
+- pattern: ^(dns_domain|dns_query|dns_response|web_domain|site_name|src_site_name|ssid)$
+  action: mask
+  kind: fqdn
+- pattern: ^(url|uri|uri_path|uri_query|target_uri|event_url|file_url|user_url|tab_url|threat_url|redirect_url|malware_url|malware_url_path|file_dir_uri|allowed_uris|email_urls|falcon_host_link|referrer)$
+  action: text
+# ========================================== credenziali e credenziali fisiche
+- pattern: ^(new_password|old_password|src_password|secret|client_token|accessor|entity_key|primary_key|secondary_key|added_keys|modified_keys|key_name)$
+  action: mask
+  kind: opaque
+- pattern: ^(badge_id|card_num|badge_reader|door_name|door_side_id|safe_name|location_door|location_door_id|src_location_door_id)$
+  action: mask
+  kind: opaque
+- pattern: ^(location|location_full|location_area|location_building|location_information|location_city|location_state|location_country|location_id|log_location|src_location|src_location_area|src_location_full|src_location_id|city|remote_location_city|remote_location_region|remote_location_latitude|remote_location_longitude)$
+  action: mask
+  kind: opaque
+# Residui verificati che restavano fuori: etichette asset, gestore Wazuh,
+# identificativi hardware del dispositivo, indirizzo del mittente.
+- pattern: ^(asset_labels|wazuh_manager|from_user_at|device_pid|device_vid|email_dlp_policy_names)$
+  action: mask
+  kind: opaque
+# ========================================================== testo e messaggi
+- pattern: ^(message|msg|status_msg|data|userdata|description|device_description|alert_description|alert_reason|alert_subject|rule_description|rule_reason|result_reason|failure_reason|case_description|case_name|activity_details|additional_info|more_info|miscellaneous|operation_details|circumstances|attack_info|error_info|history|indicator|ioc|dlp_dict|policy_content|registry_details|registry_value|old_registry_details|old_value|new_value|safe_value|sense_value|field_value|attribute_value|scriptblock_text|llm_request|llm_response|subject|email_subject|email_subject_list|stripped_email_subject|alert_name|meeting_name|meeting_topic|client_cert_subject|reason|comment|notes|raw_log|rawlog|rawlogfields|raw_log_fields|payload_printable|triggered_rules)$
+  action: text
+# ============================================================ file e processi
+- pattern: ^(file_path|file_name|file_dir|file_dir_uri|file_arn|folder_name|path|log_path|share_path|return_path|registry_path|resource_path|resource_dir|current_working_dir|creds_path|mailbox_name|dest_email_folder|src_email_folder|dest_file_dir|src_file_dir|src_file_name|src_file_path|malware_file_name|new_file_name|old_file_name|orig_filenames|quarantine_file|image_file_name|parent_image_filename|grandparent_image_filename|dest_process_dir|dest_process_path|src_process_dir|src_process_path|process_dir|process_path|process_relative_dir|process_relative_path|parent_process_dir|parent_process_path|grandparent_process_path|document_name|attachment|email_attachment|email_attachments|drive_letter|bucket_name|removable_media_name|removable_media_media_name|removable_media_volume_name|share_name|repository_name|table_name|schema_name|workspace_name|profile|profiles)$
+  action: text
+- pattern: ^(command|arg|command_invocation|command_module|db_query|process_command_line|dest_process_command_line|src_process_command_line|parent_process_command_line|grandparent_command_line|service_command_line|initiator_cmd)$
+  action: text
+- pattern: ^(process|process_name|dest_process_name|src_process_name|parent_process|parent_process_name|dest_service_name|service_name|kerberos_service_name|tgs_service_name|syscall_name|task_name|script_name|image_name|virus_name|malware_name|d_parent|d_name)$
+  action: keep
+# ===================================================================== IOC
+- pattern: ^(file_hash|hash_md5|hash_sha1|hash_sha256|hash_sha256_at|process_hash|new_hash|old_hash|parent_hash_sha256|parent_md5hash|parent_process_hash|target_hash_sha256|target_md5hash|selected_hash_sha256|selected_md5hash|module_hash_names|file_signature|host_key)$
+  action: keep
+# ============================================================== operativi
+- pattern: ^(activity|activity_id|activity_type|action|outcome|operation|operation_type|method|direction|category|categories|category_id|event_code|event_id|event_name|event_category|event_subtype|event_time|log_time|log_name|log_source|log_severity|approx_?log_?time|occured_time|issue_time|start_time|end_time|expiry_time|flow_start_time|flow_end_time|processing_end_time|duration|platform|product|vendor|vendor_name|device_vendor|device_product|device_model|device_type|device_class|device_version|machine_type|os|os_type|os_version|severity|alert_severity|alert_status|alert_type|incident_status|priority|confidence_level|impact|risk_score|session_risk_score|score|user_threat_level|user_threat_certainty|user_privilege_level|user_privilege_category|logon_type|login_type|login_type_text|auth|auth_type|auth_method|auth_level|auth_package|auth_process|credential_type|app_protocol|protocol|connection_state|connection_status|connection_type|dest_port|src_port|dest_translated_port|src_translated_port|bytes|bytes_in|bytes_out|host_bytes_in|host_bytes_out|packets|packets_in|packets_out|count|url_count|page_count|num_pages|num_recipients|num_internal_recipients|num_external_recipients|attachment_count|attachment_size|http_response_code|dns_query_type|dns_record_type|dns_response_code|error_code|failure_code|execution_status|create_result|file_type|file_category|file_ext|src_file_ext|extension|hash_type|mime|web_content_type|malware_family|mitre_labels|mitre_technique|tactic_key|technique_key|cve_id|cvss_base_score|cvss_impact_score|exploit_code_maturity|security_criticality|encrypted|is_ransomware|is_outbound|domain_join|country|country_code|dest_country|src_country|dest_country_code|src_country_code|dest_external_country|src_external_country|mfa_country|orig_cc|timezone|meeting_timezone|browser|user_agent|user_agent_client|process_type|process_signed|process_integrity|file_signed|file_signature_status|identity_type|principal_type|member_type|added_member_type|removed_member_type|group_type|host_type|src_host_type|user_type|dest_user_type|key_type|key_status|key_length|token_issuer_type|src_product|src_vendor|src_resource_type|src_net_status|src_interface|src_network_type|allowed_user_types|employee_type|badge_status|card_status|device_size|host_key_alg|mac_alg|ip_lease_time|ip_reputation|dns_ip_flow|router_ip_flow|email_attachments_bytes|remote_location_country_code)$
+  action: keep
+- pattern: ^(session_id|session_order|session_name|alert_id|incident_id|case_id|rule_id|event_uid|correlation_id|doc_id|file_id|file_dir_id|directory_id|cloud_drive_id|inode|process_id|dest_process_id|src_process_id|parent_process_id|parent_process_guid|process_guid|thread_id|tenant_id|customer_id|organization_id|subscription_id|key_id|site_id|instance_id|container_id|cluster_name|datacenter_name|datastore_name|namespace|resource_name|resource_id|printer_id|printer_name|printer_sn)$
+  action: mask
+  kind: opaque
+- pattern: .*_(entity_id|sid|dn|ou)$
+  action: mask
+  kind: user
+- pattern: .*_(id|ids|uuid|guid|arn)$
+  action: mask
+  kind: opaque
+header_hints:
+- exabeam
+- new-scale
+- newscale
+- advanced analytics
+- data lake
+notes: >-
+  Exabeam New-Scale (Common Information Model 2.0), Advanced Analytics e Data
+  Lake. Tutti i nomi di campo sono verificati sul repository ufficiale
+  ExabeamLabs/CIMLibrary - Fields_Descriptions.md (1165 campi) e
+  MetaFieldsMappings.md (88 metadati m_*). I campi custom c_* non hanno regola
+  di proposito: il contenuto lo decide il cliente, quindi restano non
+  classificati ed elisi in Safe mode. connection_uid e' documentato come md5 di
+  IP + nome utente: pseudonimo ma ricalcolabile, quindi mascherato.

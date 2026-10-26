@@ -1,0 +1,11 @@
+{
+  "credentials": "redact",
+  "private_key": "block",
+  "tax_id": "pseudonymize",
+  "iban": "pseudonymize",
+  "phone": "pseudonymize",
+  "person_name": "pseudonymize",
+  "address": "pseudonymize",
+  "cloud_id": "pseudonymize",
+  "sensitive_url": "redact"
+}

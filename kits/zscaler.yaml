@@ -1,0 +1,22 @@
+id: zscaler
+label: Zscaler ZIA (web log)
+version: 2026.07.1
+aliases: [zia, zscaler_zia, zscaler_internet_access]
+fingerprints:
+- {pattern: '^urlsupercategory$', weight: 8}
+- {pattern: '^urlcategory$', weight: 5}
+- {pattern: '^dlpengine$', weight: 5}
+- {pattern: '^malwarecategory$', weight: 5}
+- {pattern: '^appclass$', weight: 4}
+- {pattern: '^threatname$', weight: 3}
+- {pattern: '^clientip$', weight: 3}
+rules:
+- {pattern: '^(user|login|username)$', action: mask, kind: email}
+- {pattern: '^(department|location)$', action: mask, kind: opaque}
+- {pattern: '^(clientip|clientinternalip|clientpublicip|serverip)$', action: mask, kind: ip}
+- {pattern: '^(devicehostname|devicename)$', action: mask, kind: endpoint}
+- {pattern: '^(deviceowner|deviceostype|deviceosversion)$', action: mask, kind: user}
+- {pattern: '^(url|refererurl|hostname|serverdomain|md5|filetype|filename|threatname|dlpdictionaries|dlpengine|useragent)$', action: keep}
+- {pattern: '^(datetime|.*_?time|urlcategory|urlsupercategory|urlclass|appname|appclass|action|reason|malwarecategory|malwareclass|threatseverity|riskscore|requestsize|responsesize|(request|response)method|protocol|status(code)?|bandwidth.*|policy(name)?)$', action: keep}
+header_hints: [datetime, user, urlcategory]
+notes: Web log ZIA. user e' l'e-mail aziendale; department/location identificano il cliente (mask opaque); URL/host/hash = IOC (keep).

@@ -1,0 +1,33 @@
+id: crowdstrike
+label: CrowdStrike Falcon (console / FDR)
+version: 2026.07.1
+aliases: [falcon, fdr, falcon_fdr]
+fingerprints:
+- {pattern: '^event_simplename$', weight: 8}
+- {pattern: '^falconhostlink$', weight: 8}
+- {pattern: '^sha256hashdata$', weight: 8}
+- {pattern: '^aid$', weight: 5}
+- {pattern: '^cid$', weight: 4}
+- {pattern: '^detect_(id|name|description)$', weight: 5}
+- {pattern: '^machine_domain$', weight: 4}
+- {pattern: '^sensor_version$', weight: 4}
+- {pattern: '^computername$', weight: 2}
+rules:
+- {pattern: '^(user_?name|useraccount|logonuser)$', action: mask, kind: user}
+- {pattern: '^usersid$', action: mask, kind: sid}
+- {pattern: '^(computername|host_?name|hostnames?)$', action: mask, kind: endpoint}
+- {pattern: '^(machine_?domain|logondomain|domainname)$', action: mask, kind: windomain}
+- {pattern: '^(aip|localip|local_ip|localaddressip4|externalip|external_ip|remoteaddressip4|remote_ip|public_ip)$', action: mask, kind: ip}
+- {pattern: '^mac_?address$', action: mask, kind: mac}
+- {pattern: '^(aid|cid|sensorid|agent_?id|device_?id|instance_?id)$', action: mask, kind: opaque}
+- {pattern: '^(falconhostlink|falcon_host_link)$', action: mask, kind: opaque}
+- {pattern: '^(ou|site_?name|grouping_?tags?)$', action: mask, kind: opaque}
+- {pattern: '^(commandline|command_line|cmdline)$', action: text}
+- {pattern: '^detect_description$', action: text}
+- {pattern: '^(sha256hashdata|md5hashdata|sha256|md5|sha1|ioc_value|ioc_type)$', action: keep}
+- {pattern: '^(filename|file_name|filepath|file_path|imagefilename|parentbasefilename|targetfilename)$', action: keep}
+- {pattern: '^(event_simplename|name|event_?type|detect_id|detect_name|status|severity(name)?|max_severity(_displayname)?|tactic(_id)?|technique(_id)?|objective|pattern_disposition.*)$', action: keep}
+- {pattern: '^(timestamp|.*_time(stamp)?|detect_date.*|first_?seen|last_?seen)$', action: keep}
+- {pattern: '^(sensor_version|agent_version|platform(_name)?|os_version|product_type(_desc)?)$', action: keep}
+header_hints: [event_simplename, aid, computername]
+notes: Console detections export + FDR events. Hash/file/process = IOC (keep); aid/cid identificano il tenant (mask opaque).

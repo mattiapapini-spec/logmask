@@ -1,0 +1,13 @@
+# LogMask - convenzioni di naming host da mascherare (config runtime).
+# Copia in data/host_terms.txt. Un termine per riga; commenti (#) ignorati.
+#
+# Nomi letterali oppure wildcard '*' in qualsiasi posizione (v0.10.24):
+#   prefisso  srv-*        suffisso  *QNS       in mezzo  KDA*QNS
+#   dominio   *.WORKGROUP  o  *ZCORP.DOM
+# Un '*' da solo viene ignorato. Vale nel testo libero E nelle colonne keep.
+# Si somma a LOGMASK_HOST_TERMS.
+srv-*
+WKS*
+*QNS
+*.WORKGROUP
+server-sso

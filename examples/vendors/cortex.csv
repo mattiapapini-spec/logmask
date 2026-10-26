@@ -1,0 +1,2 @@
+agent_hostname,action_local_ip,action_remote_ip,actor_effective_username,severity,alert_id,causality_actor_process_command_line,custom_reference
+KWX5250.acme.example,10.152.24.216,8.8.8.8,mrossi,high,6679,"powershell.exe -File C:\Users\mrossi\script.ps1",customer-7788

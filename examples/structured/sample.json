@@ -1,0 +1,9 @@
+{
+  "@timestamp": "2026-07-12T10:00:00Z",
+  "source": {"ip": "192.168.10.25", "port": 51544},
+  "destination": {"ip": "10.20.30.40", "port": 443},
+  "user": {"name": "mrossi", "email": "mrossi@example.com"},
+  "host": {"name": "srv-01.example.com"},
+  "event": {"action": "login", "severity": "high"},
+  "customer_reference": "CASE-7788"
+}
